@@ -1,4 +1,6 @@
-﻿namespace server;
+﻿using ServerTests;
+
+namespace server;
 
 class Program
 {
