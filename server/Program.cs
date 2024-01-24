@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-
 using ServerTests;
 
 namespace server;
@@ -9,6 +8,12 @@ class Program
 {
     static void Main(string[] args)
     {
+        MongoClient mongoClient = new MongoClient("mongodb://localhost:27017");
+        IMongoDatabase database = mongoClient.GetDatabase("mongoTest");
+
+        // Hämta eller skapa en samling för användare
+        usersCollection = database.GetCollection<UserModel>("users");
+
         List<Socket> sockets = new List<Socket>();
         IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
         IPEndPoint iPEndPoint = new IPEndPoint(ipAddress, 25500);
@@ -44,4 +49,11 @@ class Program
             }
         }
     }
+}
+
+class UserModel
+{
+    ObjectId _id { get; set; }
+    ObjectId Username { get; set; }
+    ObjectId Password { get; set; }
 }
