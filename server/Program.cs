@@ -1,5 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using ServerTests;
 
 namespace server;
@@ -12,7 +14,15 @@ class Program
         IMongoDatabase database = mongoClient.GetDatabase("mongoTest");
 
         // Hämta eller skapa en samling för användare
-        usersCollection = database.GetCollection<UserModel>("users");
+        var usersCollection = database.GetCollection<UserModel>("users");
+
+        var filter = Builders<UserModel>.Filter.Empty;
+        List<UserModel> allUsers = usersCollection.Find(filter).ToList();
+
+        foreach (UserModel user in allUsers)
+        {
+            Console.WriteLine(user.Username);
+        }
 
         List<Socket> sockets = new List<Socket>();
         IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
@@ -53,7 +63,7 @@ class Program
 
 class UserModel
 {
-    ObjectId _id { get; set; }
-    ObjectId Username { get; set; }
-    ObjectId Password { get; set; }
+    public ObjectId _id { get; set; }
+    public string Username { get; set; }
+    public string Password { get; set; }
 }
