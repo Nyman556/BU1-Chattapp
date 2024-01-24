@@ -19,6 +19,8 @@ class Program
         var filter = Builders<UserModel>.Filter.Empty;
         List<UserModel> allUsers = usersCollection.Find(filter).ToList();
 
+        var testing; 
+        
         foreach (UserModel user in allUsers)
         {
             Console.WriteLine(user.Username);
