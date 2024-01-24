@@ -33,7 +33,7 @@ class Program
             SocketType.Stream,
             ProtocolType.Tcp
         );
-
+        var test;
         serverSocket.Bind(iPEndPoint);
         serverSocket.Listen(5);
 
