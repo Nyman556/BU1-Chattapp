@@ -23,7 +23,7 @@ class Program
         {
             Console.WriteLine(user.Username);
         }
-        var test;
+        //var test;
         List<Socket> sockets = new List<Socket>();
         IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
         IPEndPoint iPEndPoint = new IPEndPoint(ipAddress, 25500);
