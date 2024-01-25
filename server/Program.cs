@@ -18,7 +18,10 @@ class Program
 
         var filter = Builders<UserModel>.Filter.Empty;
         List<UserModel> allUsers = usersCollection.Find(filter).ToList();
-
+        
+        UserModel newUser = new UserModel {Username = "Gustav-Adolf", Password = "GRG"};
+        usersCollection.InsertOne(newUser);
+        
         foreach (UserModel user in allUsers)
         {
             Console.WriteLine(user.Username);
@@ -37,6 +40,7 @@ class Program
         serverSocket.Bind(iPEndPoint);
         serverSocket.Listen(5);
 
+        
         while (true)
         {
             if (serverSocket.Poll(0, SelectMode.SelectRead))
@@ -58,6 +62,8 @@ class Program
                 }
             }
         }
+        
+       
     }
 }
 
