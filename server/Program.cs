@@ -19,8 +19,7 @@ class Program
         var filter = Builders<UserModel>.Filter.Empty;
         List<UserModel> allUsers = usersCollection.Find(filter).ToList();
         
-        UserModel newUser = new UserModel {Username = "Gustav-Adolf", Password = "GRG"};
-        usersCollection.InsertOne(newUser);
+       
         
         foreach (UserModel user in allUsers)
         {
@@ -73,3 +72,7 @@ class UserModel
     public string Username { get; set; }
     public string Password { get; set; }
 }
+
+
+//  UserModel newUser = new UserModel {Username = "Gustav-Adolf", Password = "GRG"};
+        // usersCollection.InsertOne(newUser);
