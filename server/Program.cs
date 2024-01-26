@@ -10,6 +10,7 @@ class Program
 {
     static void Main(string[] args)
     {
+      
         MongoClient mongoClient = new MongoClient("mongodb://localhost:27017");
         IMongoDatabase database = mongoClient.GetDatabase("mongoTest");
 
@@ -38,6 +39,7 @@ class Program
 
         serverSocket.Bind(iPEndPoint);
         serverSocket.Listen(5);
+        Console.WriteLine()
 
         
         while (true)
@@ -71,8 +73,11 @@ class UserModel
     public ObjectId _id { get; set; }
     public string Username { get; set; }
     public string Password { get; set; }
+    // Lista av loggar kopplade till användaren
+    public List<LogMessages> LogMessage { get; set; }
+
 }
 
 
 //  UserModel newUser = new UserModel {Username = "Gustav-Adolf", Password = "GRG"};
-        // usersCollection.InsertOne(newUser);
+// usersCollection.InsertOne(newUser);

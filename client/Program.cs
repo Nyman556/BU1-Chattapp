@@ -28,3 +28,8 @@ class Program
 
     }
 }
+
+// Se historik på meddelande (upp till 30 meddelanden)
+
+//     Historiken visas så fort man loggar in
+//     Globala och privata meddelanden skall visas
