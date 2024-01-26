@@ -73,10 +73,14 @@ namespace server
                                     () => HandleLoggedInClient(client, username)
                                 );
                                 clientThread.Start();
+
+                                // TODO: Sätt loggedIn = true
                             }
                             else
                             {
                                 client.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
+
+                                // TODO: Hantera responsen på klientsidan så att den läser detta meddelande.
                             }
                         }
                     }
@@ -161,6 +165,8 @@ namespace server
             var user = database.GetCollection<UserModel>("users").Find(filter).FirstOrDefault();
 
             return user != null;
+
+            // TODO: Se till att användaren inte redan är inloggad också -> skicka tillbaka detta till användaren.
         }
     }
 
