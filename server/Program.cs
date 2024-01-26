@@ -8,10 +8,14 @@ namespace server;
 
 class Program
 {
+    private static MongoClient mongoClient;
+    private static IMongoDatabase database;
+    private static List<Socket> sockets;
+
     static void Main(string[] args)
     {
-        MongoClient mongoClient = new MongoClient("mongodb://localhost:27017");
-        IMongoDatabase database = mongoClient.GetDatabase("mongoTest");
+        mongoClient = new MongoClient("mongodb://localhost:27017");
+        database = mongoClient.GetDatabase("mongoTest");
 
         // Hämta eller skapa en samling för användare
         var usersCollection = database.GetCollection<UserModel>("users");
@@ -19,14 +23,7 @@ class Program
         var filter = Builders<UserModel>.Filter.Empty;
         List<UserModel> allUsers = usersCollection.Find(filter).ToList();
 
-        var test;
-
-        foreach (UserModel user in allUsers)
-        {
-            Console.WriteLine(user.Username);
-        }
-
-        List<Socket> sockets = new List<Socket>();
+        sockets = new List<Socket>();
         IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
         IPEndPoint iPEndPoint = new IPEndPoint(ipAddress, 25500);
 
@@ -38,6 +35,10 @@ class Program
 
         serverSocket.Bind(iPEndPoint);
         serverSocket.Listen(5);
+
+        // tråd för att hantera inputs från server-konsollen.
+        Thread consoleThread = new Thread(ConsoleInputThread);
+        consoleThread.Start();
 
         while (true)
         {
@@ -61,11 +62,46 @@ class Program
             }
         }
     }
+
+    static void ConsoleInputThread()
+    {
+        while (true)
+        {
+            if (Console.KeyAvailable)
+            {
+                string consoleInput = Console.ReadLine();
+                Console.WriteLine("From console: " + consoleInput);
+
+                // logik för console Input
+                if (consoleInput == "userlist")
+                {
+                    PrintUserList();
+                }
+            }
+
+            // Låt tråden sova en kort stund för att undvika onödig processorkonsumtion
+            Thread.Sleep(100);
+        }
+    }
+
+    static void PrintUserList()
+    {
+        var filter = Builders<UserModel>.Filter.Empty;
+        List<UserModel> allUsers = database.GetCollection<UserModel>("users").Find(filter).ToList();
+        Console.WriteLine("Users in database:");
+        foreach (UserModel user in allUsers)
+        {
+            Console.WriteLine(
+                $"Username: {user.Username} Password: {user.Password} | Currently logged in: {user.loggedIn}"
+            );
+        }
+    }
 }
 
 class UserModel
 {
     public ObjectId _id { get; set; }
-    public string Username { get; set; }
-    public string Password { get; set; }
+    public bool loggedIn { get; set; }
+    public string? Username { get; set; }
+    public string? Password { get; set; }
 }
