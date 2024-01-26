@@ -8,9 +8,9 @@ namespace server;
 
 class Program
 {
-    private static MongoClient mongoClient;
-    private static IMongoDatabase database;
-    private static List<Socket> sockets;
+    private static MongoClient? mongoClient;
+    private static IMongoDatabase? database;
+    private static List<Socket>? sockets;
 
     static void Main(string[] args)
     {
@@ -67,16 +67,13 @@ class Program
     {
         while (true)
         {
-            if (Console.KeyAvailable)
-            {
-                string consoleInput = Console.ReadLine();
-                Console.WriteLine("From console: " + consoleInput);
+            Console.WriteLine("Commands available: userlist"); // lägg till mer commands efter hand
+            string? consoleInput = Console.ReadLine();
 
-                // logik för console Input
-                if (consoleInput == "userlist")
-                {
-                    PrintUserList();
-                }
+            // logik för console Input
+            if (consoleInput == "userlist")
+            {
+                PrintAllUsers();
             }
 
             // Låt tråden sova en kort stund för att undvika onödig processorkonsumtion
@@ -84,16 +81,22 @@ class Program
         }
     }
 
-    static void PrintUserList()
+    static void PrintAllUsers()
     {
         var filter = Builders<UserModel>.Filter.Empty;
         List<UserModel> allUsers = database.GetCollection<UserModel>("users").Find(filter).ToList();
-        Console.WriteLine("Users in database:");
-        foreach (UserModel user in allUsers)
+
+        Console.WriteLine($"({allUsers.Count}) Users in database:");
+
+        foreach (UserModel? user in allUsers)
         {
-            Console.WriteLine(
-                $"Username: {user.Username} Password: {user.Password} | Currently logged in: {user.loggedIn}"
-            );
+            if (user != null)
+            {
+                Console.WriteLine("--------------------------");
+                Console.WriteLine(
+                    $"Username: {user.Username}\nPassword: {user.Password}\nCurrently logged in: {(user.loggedIn ? "Yes" : "No")}"
+                );
+            }
         }
     }
 }
