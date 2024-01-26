@@ -26,4 +26,6 @@ class Program
             clientSocket.Send(buffer);
         }
     }
+
+    // TODO: skapa login metod -> login:<username>:<password>
 }
