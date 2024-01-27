@@ -53,8 +53,11 @@ class Program
         {
             string message = Console.ReadLine()!;
             byte[] buffer = System.Text.Encoding.ASCII.GetBytes(message);
-
             clientSocket.Send(buffer);
+            if (message == "logout")
+            {
+                break;
+            }
         }
     }
 
@@ -74,6 +77,4 @@ class Program
         string parsedInput = input.ToLower().Replace(" ", ":");
         return parsedInput;
     }
-
-    // TODO: Skapa en logout metod -> hantera den på serversidan.
 }
