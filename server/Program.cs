@@ -107,15 +107,14 @@ namespace server
 
         static void HandleLoggedInClient(Socket client, string username)
         {
-            Console.WriteLine($"User {username} logged in!");
+            string user = username;
+            Console.WriteLine($"User {user} logged in!");
 
             foreach (Socket otherClient in sockets.Where(c => c != client))
             {
                 try
                 {
-                    otherClient.Send(
-                        System.Text.Encoding.UTF8.GetBytes($"User {username} logged in!")
-                    );
+                    otherClient.Send(System.Text.Encoding.UTF8.GetBytes($"User {user} logged in!"));
                 }
                 catch (SocketException)
                 {
@@ -130,8 +129,15 @@ namespace server
                 byte[] incoming = new byte[5000];
                 int read = client.Receive(incoming);
                 string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-
-                Console.WriteLine($"{username}: {message}");
+                if (message == "logout")
+                {
+                    handleLogout(user);
+                    break;
+                }
+                else
+                {
+                    Console.WriteLine($"{username}: {message}");
+                }
             }
         }
 
@@ -176,6 +182,15 @@ namespace server
             }
 
             return user != null;
+        }
+
+        static void handleLogout(string username)
+        {
+            var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
+            var update = Builders<UserModel>.Update.Set(v => v.loggedIn, false);
+            database.GetCollection<UserModel>("users").UpdateOne(filter, update);
+
+            Console.WriteLine($"User {username} logged out.");
         }
     }
 
