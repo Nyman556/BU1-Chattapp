@@ -74,4 +74,6 @@ class Program
         string parsedInput = input.ToLower().Replace(" ", ":");
         return parsedInput;
     }
+
+    // TODO: Skapa en logout metod -> hantera den på serversidan.
 }
