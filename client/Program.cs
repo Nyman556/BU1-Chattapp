@@ -36,22 +36,36 @@ class Program
             Console.WriteLine(serverMessage);
             if (serverMessage == "Login Success!")
             {
-                Thread ClientThread = new Thread(LoggedInClientThread);
+                Console.Clear();
+                Console.WriteLine(serverMessage);
+                Thread ClientThread = new Thread(SendClientThread);
                 ClientThread.Start();
+                Thread ListeningThread = new Thread(ListeningClientThread);
+                ListeningThread.Start();
+                break;
             }
         }
     }
 
-    static void LoggedInClientThread()
+    static void SendClientThread()
     {
-        Console.Clear();
-        Console.WriteLine("Login Success!");
         while (true)
         {
             string message = Console.ReadLine()!;
             byte[] buffer = System.Text.Encoding.ASCII.GetBytes(message);
 
             clientSocket.Send(buffer);
+        }
+    }
+
+    static void ListeningClientThread()
+    {
+        while (true)
+        {
+            byte[] incoming = new byte[5000];
+            int read = clientSocket.Receive(incoming);
+            string serverMessage = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
+            Console.WriteLine(serverMessage);
         }
     }
 
