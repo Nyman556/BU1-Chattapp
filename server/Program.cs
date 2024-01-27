@@ -161,12 +161,21 @@ namespace server
         {
             var filter =
                 Builders<UserModel>.Filter.Eq(u => u.Username, username)
-                & Builders<UserModel>.Filter.Eq(u => u.Password, password);
+                & Builders<UserModel>.Filter.Eq(u => u.Password, password)
+                // Se till att användaren inte redan är inloggad
+                & Builders<UserModel>.Filter.Eq(u => u.loggedIn, false);
+            // TODO: gör collectionen global > uppdatera nästa rad
             var user = database.GetCollection<UserModel>("users").Find(filter).FirstOrDefault();
 
-            return user != null;
+            if (user != null)
+            {
+                // updaterar databasen med att användaren är inloggad
+                var update = Builders<UserModel>.Update.Set(v => v.loggedIn, true);
+                // TODO: gör collectionen global > uppdatera nästa rad
+                database.GetCollection<UserModel>("users").UpdateOne(filter, update);
+            }
 
-            // TODO: Se till att användaren inte redan är inloggad också -> skicka tillbaka detta till användaren.
+            return user != null;
         }
     }
 
