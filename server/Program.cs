@@ -28,9 +28,20 @@ HistoryLog Data = new HistoryLog();
         
         foreach (UserModel user in allUsers)
         {
+        
             Console.WriteLine(user.Username);
+             Console.WriteLine(user._id);
+           
         }
+        //  foreach (ObjectId id in IDList)
+        
+        //       Console.WriteLine(id);
 
+        //      //Data.SaveLogMessages("hej jag heter Gustav Adolf!", id);
+        // }
+
+
+       
         // List<Socket> sockets = new List<Socket>();
         // IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
         // IPEndPoint iPEndPoint = new IPEndPoint(ipAddress, 25500);
@@ -73,9 +84,11 @@ HistoryLog Data = new HistoryLog();
 
 class UserModel
 {
+  
     public ObjectId? _id { get; set; }
     public string? Username { get; set; }
     public string? Password { get; set; }
+   
 }
 
 
