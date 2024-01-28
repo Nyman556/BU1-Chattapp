@@ -42,6 +42,13 @@ namespace server
             Thread consoleThread = new Thread(ConsoleInputThread);
             consoleThread.Start();
 
+            // updaterar LoggedIn på samtliga användare till false vid uppstart av servern
+            // detta istället för att hantera samma sak vid Ctrl+c/användare stänger ner programmet/programmet stänger av sig pga ett fel
+            var updateAll = Builders<UserModel>.Update.Set(u => u.LoggedIn, false);
+            database
+                .GetCollection<UserModel>("users")
+                .UpdateMany(Builders<UserModel>.Filter.Empty, updateAll);
+
             while (true)
             {
                 if (serverSocket.Poll(0, SelectMode.SelectRead))
@@ -74,7 +81,7 @@ namespace server
                                 );
                                 clientThread.Start();
 
-                                // TODO: Sätt loggedIn = true
+                                // TODO: Sätt LoggedIn = true
                             }
                             else
                             {
@@ -157,7 +164,7 @@ namespace server
                 {
                     Console.WriteLine("--------------------------");
                     Console.WriteLine(
-                        $"Username: {user.Username}\nPassword: {user.Password}\nCurrently logged in: {(user.loggedIn ? "Yes" : "No")}"
+                        $"Username: {user.Username}\nPassword: {user.Password}\nCurrently logged in: {(user.LoggedIn ? "Yes" : "No")}"
                     );
                 }
             }
@@ -169,14 +176,14 @@ namespace server
                 Builders<UserModel>.Filter.Eq(u => u.Username, username)
                 & Builders<UserModel>.Filter.Eq(u => u.Password, password)
                 // Se till att användaren inte redan är inloggad
-                & Builders<UserModel>.Filter.Eq(u => u.loggedIn, false);
+                & Builders<UserModel>.Filter.Eq(u => u.LoggedIn, false);
             // TODO: gör collectionen global > uppdatera nästa rad
             var user = database.GetCollection<UserModel>("users").Find(filter).FirstOrDefault();
 
             if (user != null)
             {
                 // updaterar databasen med att användaren är inloggad
-                var update = Builders<UserModel>.Update.Set(v => v.loggedIn, true);
+                var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, true);
                 // TODO: gör collectionen global > uppdatera nästa rad
                 database.GetCollection<UserModel>("users").UpdateOne(filter, update);
             }
@@ -187,7 +194,7 @@ namespace server
         static void handleLogout(string username)
         {
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
-            var update = Builders<UserModel>.Update.Set(v => v.loggedIn, false);
+            var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, false);
             database.GetCollection<UserModel>("users").UpdateOne(filter, update);
 
             Console.WriteLine($"User {username} logged out.");
@@ -197,7 +204,7 @@ namespace server
     class UserModel
     {
         public ObjectId _id { get; set; }
-        public bool loggedIn { get; set; }
+        public bool LoggedIn { get; set; }
         public string? Username { get; set; }
         public string? Password { get; set; }
     }
