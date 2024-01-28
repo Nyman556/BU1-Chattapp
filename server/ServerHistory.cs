@@ -20,25 +20,26 @@ public class HistoryLog
     public HistoryLog()
     {
 
-        this.mongoClient = new MongoClient("mongodb://localhost:27017/messages");
-        this.database = this.mongoClient.GetDatabase("messages");
-        this.collection = this.database.GetCollection<LogMessages>("logEntries");
+        this.mongoClient = new MongoClient("mongodb://localhost:27017/mongoTest");
+        this.database = this.mongoClient.GetDatabase("mongoTest");
+        this.collection = this.database.GetCollection<LogMessages>("logMessage");
     }
 // en metod som sparar 30 meddelanden i en log kopplat till en user med ett unikt ID
 
-    public void SaveLogMessages(string message, ObjectId user_Id)
+
+    public void SaveLogMessages(string message, List<ObjectId> user_Id)
     {
         var list = GetLog(user_Id);
         if (list.Count <= 29)
         {
-            var LogMessages = new LogMessages { Message = message, Timestamp = GetSwedishTime(), UserId = user_Id };
+            LogMessages LogMessages = new LogMessages { Message = message, Timestamp = GetSwedishTime(), UserId = user_Id };
             this.collection.InsertOne(LogMessages);
         }
         else
         {
             //om det är 29 meddelande i logen så tas det första meddelandet bort innan ett nytt sparas
             DeleteFirstLogMessage();
-            var LogMessages = new LogMessages { Message = message, Timestamp = GetSwedishTime(), UserId = user_Id };
+            LogMessages LogMessages = new LogMessages { Message = message, Timestamp = GetSwedishTime(), UserId = user_Id };
             this.collection.InsertOne(LogMessages);
         }
 
@@ -49,12 +50,13 @@ public class HistoryLog
 
 
 //en metod som skriver ut alla meddelanden i en log 
-    public List<LogMessages> GetLog(ObjectId user_id)
+    public List<LogMessages> GetLog(List<ObjectId> user_Id)
     {
-        var filter = Builders<LogMessages>.Filter.Empty;
+        var filter = Builders<LogMessages>.Filter.Eq("UserId", user_Id);
         var logMessage = this.collection.Find(filter).ToList();
         return logMessage;
     }
+
 //en metod som tar bort första meddelandet i en log 
     public void DeleteFirstLogMessage()
     {
@@ -65,7 +67,7 @@ public class HistoryLog
 
         if (firstLogMessages != null)
         {
-            var deleteFilter = Builders<LogMessages>.Filter.Eq(entry => entry.Id, firstLogMessages.Id);
+            var deleteFilter = Builders<LogMessages>.Filter.Eq(message => message.LogId, firstLogMessages.LogId);
             this.collection.DeleteOne(deleteFilter);
         }
     }
@@ -86,10 +88,17 @@ public class HistoryLog
 public class LogMessages
 {
 
-
-    public ObjectId Id { get; set; }
+//skapar ett unikt ID för denna specifika log
+    public ObjectId LogId { get; set; }
     public string? Message { get; set; }
     public DateTime Timestamp { get; set; }
-    // Användarens ID som loggen är kopplad till
-    public ObjectId UserId { get; set; }
+
+    // skapar en list av Log meddelande eftersom vi inte vet hur många användare som 
+    //kommer vara kopplade till chatten
+    public List<ObjectId> UserId { get; set; }
+
+  public void NewUser(){
+                this.UserId = new List<ObjectId>();
+            }
+
 }
