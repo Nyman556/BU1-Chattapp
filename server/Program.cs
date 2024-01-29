@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Threading;
 using MongoDB.Bson;
@@ -13,10 +14,12 @@ namespace server
         private static MongoClient? mongoClient;
         private static IMongoDatabase? database;
         //private static List<Socket>? sockets;
-
+        
+        //Clienter
         static List<Socket> sockets = new List<Socket>();
+        //Server
         static Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-    //static Socket serverSocket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        //static Socket serverSocket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
 
     static void Main(string[] args)
@@ -40,7 +43,8 @@ namespace server
 
     static void SetupServer()
     {
-        IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
+        IPAddress ipAddress = IPAddress.Loopback; //lättare att läsa och är samma sak som under
+        //IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
         IPEndPoint iPEndPoint = new IPEndPoint(ipAddress, 25500);
 
             //Socket serverSocket = new Socket(
@@ -59,7 +63,7 @@ namespace server
             // updaterar LoggedIn på samtliga användare till false vid uppstart av servern
             // detta istället för att hantera samma sak vid Ctrl+c/användare stänger ner programmet/programmet stänger av sig pga ett fel
             var updateAll = Builders<UserModel>.Update.Set(u => u.LoggedIn, false);
-            database
+            database?
                 .GetCollection<UserModel>("users")
                 .UpdateMany(Builders<UserModel>.Filter.Empty, updateAll);
 
@@ -75,8 +79,7 @@ namespace server
                     //Console.WriteLine("A client has connected!" );
                     sockets.Add(client);
                     BroadcastNotification("A new client has connected! from " + client.RemoteEndPoint);
-
-
+                    client.Send(System.Text.Encoding.UTF8.GetBytes("Connection established, welcome to the awesome server"));
                 try
                 {
                     byte[] incoming = new byte[5000];
@@ -159,7 +162,7 @@ namespace server
             {
                 try
                 {
-                    otherClient.Send(System.Text.Encoding.UTF8.GetBytes($"User {user} logged in!"));
+                    otherClient.Send(System.Text.Encoding.UTF8.GetBytes($"User {user} logged in! from" + otherClient.RemoteEndPoint));
                 }
                 catch (SocketException)
                 {
@@ -177,6 +180,7 @@ namespace server
                 if (message == "logout")
                 {
                     handleLogout(user);
+                    Console.WriteLine($"User {user} logged out! from {client.RemoteEndPoint}");
                     break;
                 }
                 else
@@ -189,7 +193,7 @@ namespace server
         static void PrintAllUsers()
         {
             var filter = Builders<UserModel>.Filter.Empty;
-            List<UserModel> allUsers = database
+            List<UserModel> allUsers = database!
                 .GetCollection<UserModel>("users")
                 .Find(filter)
                 .ToList();
@@ -216,14 +220,14 @@ namespace server
                 // Se till att användaren inte redan är inloggad
                 & Builders<UserModel>.Filter.Eq(u => u.LoggedIn, false);
             // TODO: gör collectionen global > uppdatera nästa rad
-            var user = database.GetCollection<UserModel>("users").Find(filter).FirstOrDefault();
+            var user = database?.GetCollection<UserModel>("users").Find(filter).FirstOrDefault();
 
             if (user != null)
             {
                 // updaterar databasen med att användaren är inloggad
                 var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, true);
                 // TODO: gör collectionen global > uppdatera nästa rad
-                database.GetCollection<UserModel>("users").UpdateOne(filter, update);
+                database?.GetCollection<UserModel>("users").UpdateOne(filter, update);
             }
 
             return user != null;
@@ -233,7 +237,7 @@ namespace server
         {
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
             var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, false);
-            database.GetCollection<UserModel>("users").UpdateOne(filter, update);
+            database?.GetCollection<UserModel>("users").UpdateOne(filter, update);
 
             Console.WriteLine($"User {username} logged out.");
         }
@@ -253,7 +257,7 @@ namespace server
     {
         public ObjectId _id { get; set; }
         public bool LoggedIn { get; set; }
-        public string?? Username { get; set; }
-        public string?? Password { get; set; }
+        public string? Username { get; set; }
+        public string? Password { get; set; }
     }
 }
