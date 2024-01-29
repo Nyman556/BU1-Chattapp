@@ -13,7 +13,7 @@ namespace server;
 public class LogMessages
 {
 
-//skapar ett unikt ID för denna specifika log
+    //skapar ett unikt ID för denna specifika log
     public ObjectId LogId { get; set; }
     public string? Message { get; set; }
     public DateTime Timestamp { get; set; }
@@ -26,26 +26,29 @@ public class LogMessages
 }
 
 
-public class PrivateLog : LogMessages {
-
-//public ObjectId UserId;
-
-}
-
-public class PublicLog : LogMessages {
+public class PrivateLog : LogMessages
+{
+    // söker med user name istället för ObjectId 
+    public string UserName;
 
 }
 
-class HistoryService {
+public class PublicLog : LogMessages
+{
+
+}
+
+class HistoryService
+{
     public MongoClient mongoClient;
     public IMongoDatabase database;
     public IMongoCollection<LogMessages> collection;
 
-public List<PrivateLog> PrivateMessages;
-public List<PublicLog> PublicMessages;
+    public List<PrivateLog> PrivateMessages;
+    public List<PublicLog> PublicMessages;
 
 
- public HistoryService()
+    public HistoryService()
     {
         this.mongoClient = new MongoClient("mongodb://localhost:27017/");
         this.database = this.mongoClient.GetDatabase("mongoTest");
@@ -55,34 +58,41 @@ public List<PublicLog> PublicMessages;
         this.PrivateMessages = new List<PrivateLog>();
     }
 
-   
 
-    public void SplitMessage(string message){
+
+    public void SplitMessage(string message)
+    {
 
         List<string> splitMessage = message.Split(' ').ToList();
+        if (splitMessage != null)
+        {
+            string PrivateOrePublic = splitMessage[0].ToLower();
 
-        string PrivateOrePublic = splitMessage[0].ToLower();
-
-            if(PrivateOrePublic == "public"){
+            if (PrivateOrePublic == "public")
+            {
 
                 splitMessage.Remove(splitMessage[0]);
                 string joinedMessage = string.Join(" ", splitMessage);
                 SavePublicMessage(joinedMessage);
 
-            }else if(PrivateOrePublic == "private"){
-
-                  splitMessage.Remove(splitMessage[0]);
+            }
+            else if (PrivateOrePublic == "private")
+            {
+                //ev ha med ordet public för att göra det tydligt
+                //   splitMessage.Remove(splitMessage[0]);
                 string joinedMessage = string.Join(" ", splitMessage);
                 SavePrivateMessage(joinedMessage);
             }
         }
+    }
 
-    public void SavePublicMessage(string message){
-         var log = new PublicLog { Message = message, Timestamp = GetSwedishTime()};
+    public void SavePublicMessage(string message)
+    {
+        var log = new PublicLog { Message = message, Timestamp = GetTimeStamp("W. Europe Standard Time") };
 
-;        if (this.PublicMessages.Count <= 29)
+        ; if (this.PublicMessages.Count <= 29)
         {
-            
+
             this.PublicMessages.Add(log);
 
         }
@@ -92,13 +102,14 @@ public List<PublicLog> PublicMessages;
             this.PublicMessages.Add(log);
 
         }
-       
-        
+
+
     }
 
-    public void SavePrivateMessage(string message){
-          var log = new PrivateLog { Message = message, Timestamp = GetSwedishTime()};
- if (this.PrivateMessages.Count <= 29)
+    public void SavePrivateMessage(string message)
+    {
+        var log = new PrivateLog { Message = message, Timestamp = GetTimeStamp("W. Europe Standard Time") };
+        if (this.PrivateMessages.Count <= 29)
         {
             this.PrivateMessages.Add(log);
 
@@ -109,17 +120,39 @@ public List<PublicLog> PublicMessages;
             this.PrivateMessages.Add(log);
 
         }
-       
+
     }
 
-    public DateTime GetSwedishTime()
+    public DateTime GetTimeStamp(string timeZone)
     {
         DateTime timeUtc = DateTime.UtcNow;
 
-        TimeZoneInfo estZone = TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time");
-        DateTime estTime = TimeZoneInfo.ConvertTimeFromUtc(timeUtc, estZone);
-        return estTime;
+        TimeZoneInfo zone = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
+        DateTime timeDate = TimeZoneInfo.ConvertTimeFromUtc(timeUtc, zone);
+        return timeDate;
 
 
+    }
+    public savePrivateLogToDataBase()
+    {
+        //spara listan till databasen 
+        this.collection.InsertMany(PrivateMessages);
+    }
+    public savePublicLogToDataBase()
+    {
+        //spara listan till databasen 
+        this.collection.InsertMany(PublicMessages);
+    }
+    public void GetPrivateLog(string Username)
+    {
+        var filter = Builders<PrivateLog>.Filter.Eq(LogMessages => LogMessages.UserName, username);
+        var logMessage = this.collection.Find(filter).ToList();
+        return logMessage;
+    }
+    public void GetPublicLog()
+    {
+        var filter = Builders<PublicLog>.Filter.Empty;
+        var logMessage = this.collection.Find(filter).ToList();
+        return logMessage;
     }
 }
