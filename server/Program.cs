@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -26,11 +27,15 @@ namespace server
         {
             mongoClient = new MongoClient("mongodb://localhost:27017");
             database = mongoClient.GetDatabase("mongoTest");
-
-        // Hämta eller skapa en samling för användare
         var usersCollection = database.GetCollection<UserModel>("users");
+        UserModel newUser = new UserModel {Username = " gus ", Password = " grg "};
+        usersCollection.InsertOne(newUser);
+        // Hämta eller skapa en samling för användare
+        
         var filter = Builders<UserModel>.Filter.Empty;
         List<UserModel> allUsers = usersCollection.Find(filter).ToList();
+        
+        
 
         foreach (UserModel user in allUsers)
         {
@@ -43,8 +48,8 @@ namespace server
 
     static void SetupServer()
     {
-        IPAddress ipAddress = IPAddress.Loopback; //lättare att läsa och är samma sak som under
-        //IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
+        //IPAddress ipAddress = IPAddress.Loopback; //lättare att läsa
+        IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
         IPEndPoint iPEndPoint = new IPEndPoint(ipAddress, 25500);
 
             //Socket serverSocket = new Socket(
@@ -67,7 +72,7 @@ namespace server
                 .GetCollection<UserModel>("users")
                 .UpdateMany(Builders<UserModel>.Filter.Empty, updateAll);
 
-            Console.WriteLine("Server is running on" + iPEndPoint);
+            Console.WriteLine("Server is running on " + iPEndPoint + " With 100% Power");
     }
     static void AcceptClients()
     {
@@ -78,8 +83,8 @@ namespace server
                     Socket client = serverSocket.Accept();
                     //Console.WriteLine("A client has connected!" );
                     sockets.Add(client);
-                    BroadcastNotification("A new client has connected! from " + client.RemoteEndPoint);
-                    client.Send(System.Text.Encoding.UTF8.GetBytes("Connection established, welcome to the awesome server"));
+                    BroadcastNotification(" A new client has connected! from " + client.RemoteEndPoint);
+                    client.Send(System.Text.Encoding.UTF8.GetBytes(" Connection established, welcome to the awesome server "));
                 try
                 {
                     byte[] incoming = new byte[5000];
@@ -125,9 +130,9 @@ namespace server
                                 // TODO: Sätt LoggedIn = true
                             }
                             else
-                            {
-                                client.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
-
+                            { // TODO: FELHANTERINGS METOD
+                                //client.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
+                                handleInlogException(client, username, password);
                                 // TODO: Hantera responsen på klientsidan så att den läser detta meddelande.
                             }
                         }
@@ -140,7 +145,8 @@ namespace server
         {
             while (true)
             {
-                Console.WriteLine("Commands available: userlist"); // lägg till mer commands efter hand
+                
+                Console.WriteLine("Commands available: userlist , endserver"); // lägg till mer commands efter hand
                 string? consoleInput = Console.ReadLine();
 
                 // logik för console Input
@@ -148,6 +154,15 @@ namespace server
                 {
                     PrintAllUsers();
                 }
+                else if (consoleInput == "endserver") 
+                {
+                    Console.WriteLine("Server is shuting down...");
+                    Thread.Sleep(1000);
+                    Console.Clear();
+                    Environment.Exit(0);
+                    break;
+                }
+                
                 // Låt tråden sova en kort stund för att undvika onödig processorkonsumtion
                 Thread.Sleep(100);
             }
@@ -166,10 +181,13 @@ namespace server
                 }
                 catch (SocketException)
                 {
-                    Console.WriteLine(
+                    
+                    Console.WriteLine
+                    (
                         $"Failed to send login message to {otherClient.RemoteEndPoint}"
                     );
                 }
+                
             }
 
             while (true)
@@ -250,8 +268,16 @@ namespace server
             client.Send(messageBytes);
         }
     }
-}
 
+       public static void handleInlogException(Socket client, string username, string password) 
+    {
+        Console.WriteLine($"Login failed for user {username} with password {password}");
+        client.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
+    }
+    
+    }
+   }
+              
 
     class UserModel
     {
@@ -260,4 +286,4 @@ namespace server
         public string? Username { get; set; }
         public string? Password { get; set; }
     }
-}
+
