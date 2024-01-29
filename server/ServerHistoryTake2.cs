@@ -14,7 +14,7 @@ public class LogMessages
 {
 
     //skapar ett unikt ID för denna specifika log
-    public ObjectId LogId { get; set; }
+   public ObjectId _id { get; set; }
     public string? Message { get; set; }
     public DateTime Timestamp { get; set; }
 
@@ -42,17 +42,20 @@ class HistoryService
 {
     public MongoClient mongoClient;
     public IMongoDatabase database;
-    public IMongoCollection<LogMessages> collection;
+    public IMongoCollection<PrivateLog> PrivCollection;
 
-    public List<PrivateLog> PrivateMessages;
-    public List<PublicLog> PublicMessages;
+    public IMongoCollection<PublicLog> PubCollection;
+
+    public List<PrivateLog> PrivateMessages {get; set;}
+    public List<PublicLog> PublicMessages {get; set;}
 
 
     public HistoryService()
     {
         this.mongoClient = new MongoClient("mongodb://localhost:27017/");
         this.database = this.mongoClient.GetDatabase("mongoTest");
-        this.collection = this.database.GetCollection<LogMessages>("logMessage");
+        this.PrivCollection = this.database.GetCollection<PrivateLog>("PrivateMessage");
+        this.PubCollection = this.database.GetCollection<PublicLog>("PublicMessage");
 
         this.PublicMessages = new List<PublicLog>();
         this.PrivateMessages = new List<PrivateLog>();
@@ -66,9 +69,9 @@ class HistoryService
         List<string> splitMessage = message.Split(' ').ToList();
         if (splitMessage != null)
         {
-            string PrivateOrePublic = splitMessage[0].ToLower();
+            string PrivateOrPublic = splitMessage[0].ToLower();
 
-            if (PrivateOrePublic == "public")
+            if (PrivateOrPublic == "public")
             {
 
                 splitMessage.Remove(splitMessage[0]);
@@ -76,12 +79,12 @@ class HistoryService
                 SavePublicMessage(joinedMessage);
 
             }
-            else if (PrivateOrePublic == "private")
+            else if (PrivateOrPublic == "private")
             {
                 //ev ha med ordet public för att göra det tydligt
                 //   splitMessage.Remove(splitMessage[0]);
-                string joinedMessage = string.Join(" ", splitMessage);
-                SavePrivateMessage(joinedMessage);
+                string joined = string.Join(" ", splitMessage);
+                SavePrivateMessage(joined);
             }
         }
     }
@@ -133,26 +136,26 @@ class HistoryService
 
 
     }
-    public savePrivateLogToDataBase()
+    public void savePrivateLogToDataBase()
     {
         //spara listan till databasen 
-        this.collection.InsertMany(PrivateMessages);
+        this.PrivCollection.InsertMany(this.PrivateMessages);
     }
-    public savePublicLogToDataBase()
+    public void savePublicLogToDataBase()
     {
         //spara listan till databasen 
-        this.collection.InsertMany(PublicMessages);
+        this.PubCollection.InsertMany(this.PublicMessages);
     }
-    public void GetPrivateLog(string Username)
+    public List<PrivateLog> GetPrivateLog(string username)
     {
-        var filter = Builders<PrivateLog>.Filter.Eq(LogMessages => LogMessages.UserName, username);
-        var logMessage = this.collection.Find(filter).ToList();
+        var filter = Builders<PrivateLog>.Filter.Eq(Log => Log.UserName, username);
+        var logMessage = this.PrivCollection.Find(filter).ToList();
         return logMessage;
     }
-    public void GetPublicLog()
+    public List<PublicLog> GetPublicLog()
     {
         var filter = Builders<PublicLog>.Filter.Empty;
-        var logMessage = this.collection.Find(filter).ToList();
+        var logMessage = this.PubCollection.Find(filter).ToList();
         return logMessage;
     }
 }

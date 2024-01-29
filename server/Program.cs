@@ -12,28 +12,61 @@ class Program
     {
 
 
-
-
-
-        MongoClient mongoClient = new MongoClient("mongodb://localhost:27017");
-        IMongoDatabase database = mongoClient.GetDatabase("mongoTest");
-
-        // // Hämta eller skapa en samling för användare
-       
-         var usersCollection = database.GetCollection<UserModel>("users");
-
-        var filter = Builders<UserModel>.Filter.Empty;
-        List<UserModel> allUsers = usersCollection.Find(filter).ToList();
+   // Skapa en instans av HistoryService
+        var historyService = new HistoryService();
         
-       
-        
-        foreach (UserModel user in allUsers)
+        // Testa SplitMessage-metoden
+        historyService.SplitMessage("public This is a public message");
+        historyService.SplitMessage("private Joel This is a private message");
+             historyService.SplitMessage("public This is a public message");
+        historyService.SplitMessage("private Philip This is a private message");
+             historyService.SplitMessage("public This is a public message");
+        historyService.SplitMessage("private Hej där!");
+            historyService.SplitMessage("private lalalalalalal");
+                historyService.SplitMessage("private fint sjunget :)");
+
+
+        Console.WriteLine("we try to split");
+        // Testa att spara loggar i databasen
+        historyService.savePublicLogToDataBase();
+        historyService.savePrivateLogToDataBase();
+        Console.WriteLine("we try saving to data base");
+        // Testa att hämta loggar från databasen
+        var publicLogs = historyService.GetPublicLog();
+        var privateLogs = historyService.GetPrivateLog("John");
+
+        // Skriv ut resultaten
+       Console.WriteLine("Public Logs:"); 
+        foreach (var log in publicLogs)
         {
-        
-            Console.WriteLine(user.Username);
-             Console.WriteLine(user._id);
-           
+            Console.WriteLine($"{log.Timestamp}: {log.Message}");
         }
+
+        Console.WriteLine("\nPrivate Logs:")
+        foreach (var log in privateLogs)
+        {
+            Console.WriteLine($"{log.Timestamp}: {log.UserName} - {log.Message}");
+        }
+
+        // MongoClient mongoClient = new MongoClient("mongodb://localhost:27017");
+        // IMongoDatabase database = mongoClient.GetDatabase("mongoTest");
+
+        // // // Hämta eller skapa en samling för användare
+       
+        //  var usersCollection = database.GetCollection<UserModel>("users");
+
+        // var filter = Builders<UserModel>.Filter.Empty;
+        // List<UserModel> allUsers = usersCollection.Find(filter).ToList();
+        
+       
+        
+        // foreach (UserModel user in allUsers)
+        // {
+        
+        //     Console.WriteLine(user.Username);
+        //      Console.WriteLine(user._id);
+           
+        // }
         //  foreach (ObjectId id in IDList)
         
         //       Console.WriteLine(id);
