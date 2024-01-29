@@ -24,7 +24,7 @@ namespace server
 
 
     static void Main(string[] args)
-        {
+        { //mongoClient för servern och database för namnet i compass
             mongoClient = new MongoClient("mongodb://localhost:27017");
             database = mongoClient.GetDatabase("mongoTest");
         var usersCollection = database.GetCollection<UserModel>("users");
@@ -72,7 +72,7 @@ namespace server
                 .GetCollection<UserModel>("users")
                 .UpdateMany(Builders<UserModel>.Filter.Empty, updateAll);
 
-            Console.WriteLine("Server is running on " + iPEndPoint + " With 100% Power");
+            Console.WriteLine("Server is running on a dedicated Linux " + iPEndPoint + ", With 100% Power.");
     }
     static void AcceptClients()
     {
@@ -83,8 +83,12 @@ namespace server
                     Socket client = serverSocket.Accept();
                     //Console.WriteLine("A client has connected!" );
                     sockets.Add(client);
-                    BroadcastNotification(" A new client has connected! from " + client.RemoteEndPoint);
-                    client.Send(System.Text.Encoding.UTF8.GetBytes(" Connection established, welcome to the awesome server "));
+                    foreach (Socket otherClient in sockets.Where(c => c != client))
+                    {
+                    BroadcastNotification(" A new client has connected! from " + client.RemoteEndPoint);                                        
+                    }
+                    //client.Send(System.Text.Encoding.UTF8.GetBytes(" Connection established, Welcome to the awesome server, powered by Linux! "));
+                    BroadcastNotification(" Connection established, Welcome to the awesome server, powered by Linux! ");
                 try
                 {
                     byte[] incoming = new byte[5000];
@@ -97,7 +101,7 @@ namespace server
                     else
                     {
                         string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-                        Console.WriteLine("From Client " + client.RemoteEndPoint + message);
+                        Console.WriteLine("From Client " + client.RemoteEndPoint + "\n" + message );
                     }                
                 } catch(SocketException ex)
                 {
@@ -112,7 +116,7 @@ namespace server
                         int read = client.Receive(incoming);
                         string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
 
-                        if (message.StartsWith("login:"))
+                        if (message.StartsWith("login: "))
                         {
                             string[] credentials = message.Substring(6).Split(':');
                             string username = credentials[0];
@@ -146,7 +150,7 @@ namespace server
             while (true)
             {
                 
-                Console.WriteLine("Commands available: userlist , endserver"); // lägg till mer commands efter hand
+                Console.WriteLine("\nCommands available: userlist , endserver :"); // lägg till mer commands efter hand
                 string? consoleInput = Console.ReadLine();
 
                 // logik för console Input
@@ -177,7 +181,7 @@ namespace server
             {
                 try
                 {
-                    otherClient.Send(System.Text.Encoding.UTF8.GetBytes($"User {user} logged in! from" + otherClient.RemoteEndPoint));
+                    otherClient.Send(System.Text.Encoding.UTF8.GetBytes($"User {user} logged in! from " + otherClient.RemoteEndPoint));
                 }
                 catch (SocketException)
                 {
@@ -198,7 +202,11 @@ namespace server
                 if (message == "logout")
                 {
                     handleLogout(user);
-                    Console.WriteLine($"User {user} logged out! from {client.RemoteEndPoint}");
+                    Console.WriteLine($"User {user} logged out! from {client.RemoteEndPoint} ");
+                    Console.WriteLine("Server is shuting down..."); // test
+                    Thread.Sleep(1000);
+                    Console.Clear();
+                    Environment.Exit(0); // test
                     break;
                 }
                 else

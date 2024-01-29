@@ -77,4 +77,19 @@ class Program
         string parsedInput = input.ToLower().Replace(" ", ":");
         return parsedInput;
     }
+
+    /*static void ClientInputThread()
+    {
+        while (true)
+        {
+            Console.WriteLine("\n Help commands: -help ");
+            string clientInput = console.ReadLine();
+
+            if (clientInput == "-help")
+            {
+                Console.WriteLine("Type commands \nlogout \nback to login")
+            }
+            Thread.Sleep(100);
+        }
+    }*/
 }
