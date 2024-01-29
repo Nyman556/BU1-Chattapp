@@ -11,8 +11,9 @@ class Program
     static void Main(string[] args)
     {
 
-        
-HistoryLog Data = new HistoryLog();
+
+
+
 
         MongoClient mongoClient = new MongoClient("mongodb://localhost:27017");
         IMongoDatabase database = mongoClient.GetDatabase("mongoTest");
