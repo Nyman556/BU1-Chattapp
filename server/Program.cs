@@ -116,8 +116,6 @@ namespace server
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
             var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, false);
             database.GetCollection<UserModel>("users").UpdateOne(filter, update);
-
-            Console.WriteLine($"User {username} logged out.");
         }
 
         private void ConsoleInputThread()
@@ -181,23 +179,42 @@ namespace server
 
         public void HandleMessages()
         {
-            while (true)
+            try
             {
-                byte[] incoming = new byte[5000];
-                int read = clientSocket.Receive(incoming);
-                string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-                if (message == "logout")
+                while (true)
                 {
-                    if (username != null)
+                    byte[] incoming = new byte[5000];
+                    int read = clientSocket.Receive(incoming);
+                    string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
+
+                    if (string.IsNullOrEmpty(message))
                     {
-                        HandleLogout(username);
+                        break;
                     }
-                    break;
+
+                    if (message == "logout")
+                    {
+                        if (username != null)
+                        {
+                            // TODO: fixa så att detta hanteras på samma sätt som socketExceptionen nedanför
+                            HandleLogout(username);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"{username}: {message}");
+                    }
                 }
-                else
-                {
-                    Console.WriteLine($"{username}: {message}");
-                }
+            }
+            catch (SocketException)
+            {
+                Console.WriteLine($"User {username} disconnected.");
+            }
+            finally
+            {
+                _LoggedIn = false;
+                HandleLogout(username);
+                clientSocket.Close();
             }
         }
 
@@ -213,6 +230,8 @@ namespace server
                     string[] credentials = message.Substring(6).Split(':');
                     username = credentials[0];
                     string password = credentials[1];
+
+                    // TODO: felhantering vid credentials < 2 etc
 
                     if (chatServer.ValidateCredentials(username, password))
                     {
