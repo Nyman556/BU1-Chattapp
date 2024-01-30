@@ -17,6 +17,7 @@ class Program
         );
 
         clientSocket.Connect(iPEndPoint);
+        Console.WriteLine("Connected to server!");
 
         while (true)
         {
