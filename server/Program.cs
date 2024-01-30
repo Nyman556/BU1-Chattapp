@@ -65,7 +65,6 @@ namespace server
                 {
                     AcceptNewClients();
                 }
-                HandleClientMessages();
             }
         }
 
@@ -89,15 +88,9 @@ namespace server
             Console.WriteLine("A client has connected!");
             var client = new Client(clientSocket, this);
             clients.Add(client);
-            client.Start();
-        }
 
-        private void HandleClientMessages()
-        {
-            foreach (var client in clients)
-            {
-                client.HandleMessages();
-            }
+            Thread clientTread = new Thread(client.Start);
+            clientTread.Start();
         }
 
         public bool ValidateCredentials(string username, string password)
@@ -179,29 +172,10 @@ namespace server
 
         public void Start()
         {
-            while (!_LoggedIn)
+            HandleLogin();
+            if (_LoggedIn)
             {
-                byte[] incoming = new byte[5000];
-                int read = clientSocket.Receive(incoming);
-                string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-                if (message.StartsWith("login:"))
-                {
-                    string[] credentials = message.Substring(6).Split(':');
-                    username = credentials[0];
-                    string password = credentials[1];
-
-                    if (chatServer.ValidateCredentials(username, password))
-                    {
-                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
-                        Console.WriteLine($"{username} logged in!");
-                        _LoggedIn = true;
-                        HandleMessages();
-                    }
-                    else
-                    {
-                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
-                    }
-                }
+                HandleMessages();
             }
         }
 
@@ -220,6 +194,33 @@ namespace server
                 else
                 {
                     Console.WriteLine($"{username}: {message}");
+                }
+            }
+        }
+
+        private void HandleLogin()
+        {
+            while (!_LoggedIn)
+            {
+                byte[] incoming = new byte[5000];
+                int read = clientSocket.Receive(incoming);
+                string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
+                if (message.StartsWith("login:"))
+                {
+                    string[] credentials = message.Substring(6).Split(':');
+                    username = credentials[0];
+                    string password = credentials[1];
+
+                    if (chatServer.ValidateCredentials(username, password))
+                    {
+                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
+                        Console.WriteLine($"{username} logged in!");
+                        _LoggedIn = true;
+                    }
+                    else
+                    {
+                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
+                    }
                 }
             }
         }
