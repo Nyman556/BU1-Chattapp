@@ -22,7 +22,7 @@ namespace server
         private List<Client> clients;
 
         // intern data
-        private List<UserModel> allUsers;
+        private List<UserModel>? allUsers;
 
         public Server()
         {
@@ -125,7 +125,7 @@ namespace server
             while (true)
             {
                 Console.WriteLine("Commands available: userlist"); // lägg till mer commands efter hand
-                string consoleInput = Console.ReadLine();
+                string? consoleInput = Console.ReadLine();
 
                 // logik för console Input
                 if (consoleInput == "userlist")
@@ -161,7 +161,7 @@ namespace server
     {
         private Socket clientSocket;
         private Server chatServer;
-        private string username;
+        private string? username;
         private bool _LoggedIn = false;
 
         public Client(Socket socket, Server server)
@@ -188,7 +188,10 @@ namespace server
                 string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
                 if (message == "logout")
                 {
-                    HandleLogout(username);
+                    if (username != null)
+                    {
+                        HandleLogout(username);
+                    }
                     break;
                 }
                 else
