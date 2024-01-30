@@ -88,7 +88,7 @@ namespace server
                     BroadcastNotification(" A new client has connected! from " + client.RemoteEndPoint);                                        
                     }
                     //client.Send(System.Text.Encoding.UTF8.GetBytes(" Connection established, Welcome to the awesome server, powered by Linux! "));
-                    BroadcastNotification(" Connection established, Welcome to the awesome server, powered by Linux! ");
+                    //BroadcastNotification(" Connection established, Welcome to the awesome server, powered by Linux! ");
                 try
                 {
                     byte[] incoming = new byte[5000];
@@ -203,10 +203,10 @@ namespace server
                 {
                     handleLogout(user);
                     Console.WriteLine($"User {user} logged out! from {client.RemoteEndPoint} ");
-                    Console.WriteLine("Server is shuting down..."); // test
+                    Console.WriteLine("Server is shutting down...");
                     Thread.Sleep(1000);
                     Console.Clear();
-                    Environment.Exit(0); // test
+                    Environment.Exit(0);
                     break;
                 }
                 else
