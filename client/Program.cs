@@ -21,26 +21,34 @@ namespace client
             Console.WriteLine("Connected to server!");
 
             bool loggedIn = false;
+            string serverMessage;
 
             while (true)
             {
+                // ta emot meddelanden
+                if (clientSocket.Poll(0, SelectMode.SelectRead))
+                {
+                    serverMessage = ReceiveMessage();
+                    Console.Clear();
+                    Console.WriteLine(serverMessage);
+                }
+
                 Console.WriteLine("Possible commands: login <username> <password>");
                 string message = Console.ReadLine()!;
 
                 // logik för commands
                 string parsedMessage = ParseInput(message);
-                byte[] buffer = Encoding.ASCII.GetBytes(parsedMessage);
+                byte[] buffer = Encoding.UTF8.GetBytes(parsedMessage);
                 clientSocket.Send(buffer);
 
                 // ta emot meddelanden
-                string serverMessage = ReceiveMessage();
+                serverMessage = ReceiveMessage();
                 Console.Clear();
                 Console.WriteLine(serverMessage);
 
                 if (!loggedIn && serverMessage == "Login Success!")
                 {
                     Console.Clear();
-                    Console.WriteLine(serverMessage);
                     loggedIn = true;
                 }
 
@@ -53,12 +61,12 @@ namespace client
                         string userMessage = Console.ReadLine()!;
                         if (userMessage == "logout")
                         {
-                            byte[] logoutBuffer = Encoding.ASCII.GetBytes(userMessage);
+                            byte[] logoutBuffer = Encoding.UTF8.GetBytes(userMessage);
                             clientSocket.Send(logoutBuffer);
                             break;
                         }
 
-                        byte[] userMessageBuffer = Encoding.ASCII.GetBytes(userMessage);
+                        byte[] userMessageBuffer = Encoding.UTF8.GetBytes(userMessage);
                         clientSocket.Send(userMessageBuffer);
                     }
                 }
