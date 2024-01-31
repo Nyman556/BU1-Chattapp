@@ -87,5 +87,6 @@ namespace client
         {
             return input.ToLower().Replace(" ", ":");
         }
+
     }
 }
