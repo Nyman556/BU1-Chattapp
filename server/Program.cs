@@ -1,229 +1,132 @@
-﻿﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace server
 {
-    class Program
+    class Server
     {
-        private static MongoClient? mongoClient;
-        private static IMongoDatabase? database;
-        private static List<Socket>? sockets;
+        // databas
+        private MongoClient mongoClient;
+        private IMongoDatabase database;
+        private IMongoCollection<UserModel> userCollection;
 
-        static void Main(string[] args)
+        // serverSocket
+        private Socket serverSocket;
+
+        // lista med clienter
+        private List<Client> clients;
+
+        // intern data
+        private List<UserModel>? allUsers;
+
+        public Server()
         {
             mongoClient = new MongoClient("mongodb://localhost:27017");
             database = mongoClient.GetDatabase("mongoTest");
+            userCollection = database.GetCollection<UserModel>("users");
+            clients = new List<Client>();
+            serverSocket = CreateServerSocket();
+        }
 
-            // Hämta eller skapa en samling för användare
-            var usersCollection = database.GetCollection<UserModel>("users");
-
-            var filter = Builders<UserModel>.Filter.Empty;
-            List<UserModel> allUsers = usersCollection.Find(filter).ToList();
-
-            sockets = new List<Socket>();
+        private Socket CreateServerSocket()
+        {
             IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
-            IPEndPoint iPEndPoint = new IPEndPoint(ipAddress, 25500);
+            IPEndPoint ipEndPoint = new IPEndPoint(ipAddress, 25500);
 
-            Socket serverSocket = new Socket(
+            Socket socket = new Socket(
                 ipAddress.AddressFamily,
                 SocketType.Stream,
                 ProtocolType.Tcp
             );
 
-            serverSocket.Bind(iPEndPoint);
-            serverSocket.Listen(5);
+            socket.Bind(ipEndPoint);
+            socket.Listen(5);
 
-            // tråd för att hantera inputs från server-konsollen.
+            return socket;
+        }
+
+        public void Start()
+        {
+            Initialize();
+
+            // startar tråd för att hantera inputs från server-konsollen.
             Thread consoleThread = new Thread(ConsoleInputThread);
             consoleThread.Start();
 
-            // updaterar LoggedIn på samtliga användare till false vid uppstart av servern
-            // detta istället för att hantera samma sak vid Ctrl+c/användare stänger ner programmet/programmet stänger av sig pga ett fel
-            var updateAll = Builders<UserModel>.Update.Set(u => u.LoggedIn, false);
-            database
-                .GetCollection<UserModel>("users")
-                .UpdateMany(Builders<UserModel>.Filter.Empty, updateAll);
-
+            // Server loop
             while (true)
             {
                 if (serverSocket.Poll(0, SelectMode.SelectRead))
                 {
-                    Socket client = serverSocket.Accept();
-                    Console.WriteLine("A client has connected!");
-                    sockets.Add(client);
-                }
-
-                foreach (Socket client in sockets)
-                {
-                    if (client.Poll(0, SelectMode.SelectRead))
-                    {
-                        byte[] incoming = new byte[5000];
-                        int read = client.Receive(incoming);
-                        string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-
-                        if (message.StartsWith("login:"))
-                        {
-                            string[] credentials = message.Substring(6).Split(':');
-                            string username = credentials[0];
-                            string password = credentials[1];
-
-                            if (ValidateCredentials(username, password))
-                            {
-                                client.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
-
-                                Thread clientThread = new Thread(
-                                    () => HandleLoggedInClient(client, username)
-                                );
-                                clientThread.Start();
-
-                                // TODO: Sätt LoggedIn = true
-                            
-                            }
-                            else
-                            {
-                                client.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
-
-                                // TODO: Hantera responsen på klientsidan så att den läser detta meddelande.
-                            }
-                        } else if (message.StartsWith("new:")) {
-                            string[] newUserData = message.Substring(4).Split(':');
-                            string newUsername = newUserData[0];
-                            string newPassword = newUserData[1];
-
-                                if (CheckTaken(newUsername)){
-
-                                    client.Send(System.Text.Encoding.UTF8.GetBytes("username already taken!"));
-                                } 
-                                else
-                                {
-                                    CreateNewUser(newUsername, newPassword);
-                                    client.Send(System.Text.Encoding.UTF8.GetBytes("new user created!"));
-                                }
-                        }
-                    }
+                    AcceptNewClients();
                 }
             }
         }
 
-        static void ConsoleInputThread()
+        private void Initialize()
         {
-            while (true)
-            {
-                Console.WriteLine("Commands available: userlist"); // lägg till mer commands efter hand
-                string? consoleInput = Console.ReadLine();
-
-                // logik för console Input
-                if (consoleInput == "userlist")
-                {
-                    PrintAllUsers();
-                } 
-                // Låt tråden sova en kort stund för att undvika onödig processorkonsumtion
-                Thread.Sleep(100);
-            }
-        }
-
-        static void HandleLoggedInClient(Socket client, string username)
-        {
-            string user = username;
-            Console.WriteLine($"User {user} logged in!");
-
-            foreach (Socket otherClient in sockets.Where(c => c != client))
-            {
-                try
-                {
-                    otherClient.Send(System.Text.Encoding.UTF8.GetBytes($"User {user} logged in!"));
-                }
-                catch (SocketException)
-                {
-                    Console.WriteLine(
-                        $"Failed to send login message to {otherClient.RemoteEndPoint}"
-                    );
-                }
-            }
-
-            while (true)
-            {
-                byte[] incoming = new byte[5000];
-                int read = client.Receive(incoming);
-                string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-                if (message == "logout")
-                {
-                    handleLogout(user);
-                    break;
-                }
-                else
-                {
-                    Console.WriteLine($"{username}: {message}");
-                }
-            }
-        }
-
-        static void PrintAllUsers()
-        {
+            // uppstarts-logik
             var filter = Builders<UserModel>.Filter.Empty;
-            List<UserModel> allUsers = database
-                .GetCollection<UserModel>("users")
-                .Find(filter)
-                .ToList();
+            allUsers = userCollection.Find(filter).ToList();
 
-            Console.WriteLine($"({allUsers.Count}) Users in database:");
-
-            foreach (UserModel? user in allUsers)
-            {
-                if (user != null)
-                {
-                    Console.WriteLine("--------------------------");
-                    Console.WriteLine(
-                        $"Username: {user.Username}\nPassword: {user.Password}\nCurrently logged in: {(user.LoggedIn ? "Yes" : "No")}"
-                    );
-                }
-            }
+            // updaterar LoggedIn på samtliga användare till false
+            // detta istället för att hantera samma sak vid Ctrl+c/användare stänger ner programmet/programmet stänger av sig pga ett fel
+            var updateAll = Builders<UserModel>.Update.Set(u => u.LoggedIn, false);
+            database
+                ?.GetCollection<UserModel>("users")
+                .UpdateMany(Builders<UserModel>.Filter.Empty, updateAll);
         }
 
-        static bool ValidateCredentials(string username, string password)
+        private void AcceptNewClients()
+        {
+            Socket clientSocket = serverSocket.Accept();
+            Console.WriteLine("A client has connected!");
+            var client = new Client(clientSocket, this);
+            clients.Add(client);
+
+            Thread clientTread = new Thread(client.Start);
+            clientTread.Start();
+        }
+
+        public bool ValidateCredentials(string username, string password)
         {
             var filter =
                 Builders<UserModel>.Filter.Eq(u => u.Username, username)
                 & Builders<UserModel>.Filter.Eq(u => u.Password, password)
                 // Se till att användaren inte redan är inloggad
                 & Builders<UserModel>.Filter.Eq(u => u.LoggedIn, false);
-            // TODO: gör collectionen global > uppdatera nästa rad
             var user = database.GetCollection<UserModel>("users").Find(filter).FirstOrDefault();
 
             if (user != null)
             {
                 // updaterar databasen med att användaren är inloggad
                 var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, true);
-                // TODO: gör collectionen global > uppdatera nästa rad
                 database.GetCollection<UserModel>("users").UpdateOne(filter, update);
             }
-
             return user != null;
         }
 
-        static void handleLogout(string username)
+        public void HandleLogout(string username)
         {
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
             var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, false);
             database.GetCollection<UserModel>("users").UpdateOne(filter, update);
-
-            Console.WriteLine($"User {username} logged out.");
         }
 
-
-        // Metod för att skapa ny användare.
-        static void CreateNewUser(string username, string password) {
+        public void CreateNewUser(string username, string password) {
             var usersCollection = database.GetCollection<UserModel>("users");
             UserModel newUser = new UserModel {Username = username, Password = password, LoggedIn = false};
             usersCollection.InsertOne(newUser);
         }
 
-        static bool CheckTaken(string username) {
+        public bool CheckTaken(string username) {
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
             var user = database.GetCollection<UserModel>("users").Find(filter).Any();
           
@@ -231,17 +134,206 @@ namespace server
 
         }
 
+        private void ConsoleInputThread()
+        {
+            while (true)
+            {
+                Console.WriteLine("\nCommands available: userlist , endserver :"); // lägg till mer commands efter hand
+                string? consoleInput = Console.ReadLine();
 
+                // logik för console Input
+                if (consoleInput == "userlist")
+                {
+                    PrintAllUsers();
+                }
+                else if (consoleInput == "endserver")
+                {
+                    Console.WriteLine("Server is shuting down...");
+                    Thread.Sleep(1000);
+                    Console.Clear();
+                    Environment.Exit(0);
+                    break;
+                }
+
+                // Låt tråden sova en kort stund för att undvika onödig processorkonsumtion
+                Thread.Sleep(100);
+            }
+        }
+
+        private void PrintAllUsers()
+        {
+            var filter = Builders<UserModel>.Filter.Empty;
+            List<UserModel> allUsers = database!
+                .GetCollection<UserModel>("users")
+                .Find(filter)
+                .ToList();
+
+            Console.WriteLine($"({allUsers.Count}) Users in database:");
+
+            foreach (UserModel user in allUsers)
+            {
+                Console.WriteLine("--------------------------");
+                Console.WriteLine(
+                    $"Username: {user.Username}\nPassword: {user.Password}\nCurrently logged in: {(user.LoggedIn ? "Yes" : "No")}"
+                );
+            }
+        }
+    }
+
+    class Client
+    {
+        private Socket clientSocket;
+        private Server chatServer;
+        private string? username;
+        private bool _LoggedIn = false;
+
+        public Client(Socket socket, Server server)
+        {
+            clientSocket = socket;
+            chatServer = server;
+        }
+
+        public void Start()
+        {
+            HandleLogin();
+            if (_LoggedIn)
+            {
+                HandleMessages();
+            }
+        }
+
+        public void HandleMessages()
+        {
+            try
+            {
+                while (_LoggedIn)
+                {
+                    byte[] incoming = new byte[5000];
+                    int read = clientSocket.Receive(incoming);
+                    string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
+
+                    if (string.IsNullOrEmpty(message))
+                    {
+                        break;
+                    }
+
+                    if (message == "logout")
+                    {
+                        if (username != null)
+                        {
+                            // TODO: fixa så att detta hanteras på samma sätt som socketExceptionen nedanför
+                            HandleLogout(username);
+                            Console.WriteLine($"User {username} logged out.");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"{username}: {message}");
+                    }
+                }
+                return;
+            }
+            catch (SocketException)
+            {
+                Console.WriteLine($"User {username} disconnected.");
+            }
+            finally
+            {
+                _LoggedIn = false;
+                HandleLogout(username);
+                clientSocket.Close();
+            }
+        }
+
+        private void HandleLogin()
+        {
+            while (!_LoggedIn)
+            {
+                byte[] incoming = new byte[5000];
+                int read = clientSocket.Receive(incoming);
+                string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
+                if (message.StartsWith("login:"))
+                {
+                    string[] credentials = message.Substring(6).Split(':');
+                    username = credentials[0];
+                    string password = credentials[1];
+
+                    // TODO: felhantering vid credentials < 2 etc
+
+                    if (chatServer.ValidateCredentials(username, password))
+                    {
+                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
+                        Console.WriteLine($"{username} logged in!");
+                        _LoggedIn = true;
+                    }
+                    else
+                    {
+                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
+                    }
+                }
+                     else if (message.StartsWith("new:")) {
+                            string[] newUserData = message.Substring(4).Split(':');
+                            string newUsername = newUserData[0];
+                            string newPassword = newUserData[1];
+
+                                if (CheckTaken(newUsername)){
+
+                                    clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("username already taken!"));
+                                } 
+                                else
+                                {
+                                    CreateNewUser(newUsername, newPassword);
+                                    clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("new user created!"));
+                                }
+                                }
+            }
+        }
+
+
+
+
+        private void HandleLogout(string username)
+        {
+            chatServer.HandleLogout(username);
+        }
+        private void CreateNewUser(string username, string password)
+        {
+           chatServer.CreateNewUser(username, password);
+        }
+        private bool CheckTaken(string username)
+        {
+           bool taken = chatServer.CheckTaken(username);
+           return taken;
+           
+        }
 
     }
 
-    class UserModel
+    public class UserModel
     {
         public ObjectId _id { get; set; }
         public bool LoggedIn { get; set; }
         public string? Username { get; set; }
         public string? Password { get; set; }
     }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            var server = new Server();
+            server.Start();
+        }
+    }
 }
+   
+
+
+
 
    
+
+
+
+
+       

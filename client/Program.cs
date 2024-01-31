@@ -1,83 +1,91 @@
-﻿﻿using System.Net;
+﻿﻿using System;
+using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
-namespace client;
-
-class Program
+namespace client
 {
-    private static IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
-    private static IPEndPoint iPEndPoint = new IPEndPoint(ipAddress, 25500);
-    private static Socket clientSocket = new Socket(
-        ipAddress.AddressFamily,
-        SocketType.Stream,
-        ProtocolType.Tcp
-    );
-
-    static void Main(string[] args)
+    class Program
     {
-        clientSocket.Connect(iPEndPoint);
-        Console.WriteLine("Connected to server!");
+        private static IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
+        private static IPEndPoint iPEndPoint = new IPEndPoint(ipAddress, 25500);
+        private static Socket clientSocket = new Socket(
+            ipAddress.AddressFamily,
+            SocketType.Stream,
+            ProtocolType.Tcp
+        );
 
-        while (true)
+        static void Main(string[] args)
         {
-            Console.WriteLine("Possible commands:");
-            Console.WriteLine("login <username> <password>");
-            Console.WriteLine("new <username> <password>");
-            
-            string message = Console.ReadLine()!;
+            clientSocket.Connect(iPEndPoint);
+            Console.WriteLine("Connected to server!");
 
-            // logik för commands
-            string parsedMessage = parseInput(message);
-            byte[] buffer = System.Text.Encoding.ASCII.GetBytes(parsedMessage);
-            clientSocket.Send(buffer);
+            bool loggedIn = false;
+            string serverMessage;
 
-            // ta emot meddelanden
-            byte[] incoming = new byte[5000];
-            int read = clientSocket.Receive(incoming);
-            string serverMessage = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-            Console.Clear();
-            Console.WriteLine(serverMessage);
-            if (serverMessage == "Login Success!")
+            while (true)
             {
+                // ta emot meddelanden
+                if (clientSocket.Poll(0, SelectMode.SelectRead))
+                {
+                    serverMessage = ReceiveMessage();
+                    Console.Clear();
+                    Console.WriteLine(serverMessage);
+                }
+
+                 Console.WriteLine("Possible commands:");
+                 Console.WriteLine("login <username> <password>");
+                 Console.WriteLine("new <username> <password>");
+                string message = Console.ReadLine()!;
+
+                // logik för commands
+                string parsedMessage = ParseInput(message);
+                byte[] buffer = Encoding.UTF8.GetBytes(parsedMessage);
+                clientSocket.Send(buffer);
+
+                // ta emot meddelanden
+                serverMessage = ReceiveMessage();
                 Console.Clear();
                 Console.WriteLine(serverMessage);
-                Thread ClientThread = new Thread(SendClientThread);
-                ClientThread.Start();
-                Thread ListeningThread = new Thread(ListeningClientThread);
-                ListeningThread.Start();
-                break;
-            }
-        }
-    }
 
-    static void SendClientThread()
-    {
-        while (true)
-        {
-            string message = Console.ReadLine()!;
-            byte[] buffer = System.Text.Encoding.ASCII.GetBytes(message);
-            clientSocket.Send(buffer);
-            if (message == "logout")
-            {
-                break;
-            }
-        }
-    }
+                if (!loggedIn && serverMessage == "Login Success!")
+                {
+                    Console.Clear();
+                    loggedIn = true;
+                }
 
-    static void ListeningClientThread()
-    {
-        while (true)
+                if (loggedIn)
+                {
+                    Console.WriteLine("type 'logout' to exit.");
+                    while (true)
+                    {
+                        Console.Write("Message: ");
+                        string userMessage = Console.ReadLine()!;
+                        if (userMessage == "logout")
+                        {
+                            byte[] logoutBuffer = Encoding.UTF8.GetBytes(userMessage);
+                            clientSocket.Send(logoutBuffer);
+                            break;
+                        }
+
+                        byte[] userMessageBuffer = Encoding.UTF8.GetBytes(userMessage);
+                        clientSocket.Send(userMessageBuffer);
+                    }
+                }
+            }
+            clientSocket.Close();
+        }
+
+        static string ReceiveMessage()
         {
             byte[] incoming = new byte[5000];
             int read = clientSocket.Receive(incoming);
-            string serverMessage = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-            Console.WriteLine(serverMessage);
+            return Encoding.UTF8.GetString(incoming, 0, read);
         }
-    }
 
-    static string parseInput(string input)
-    {
-        string parsedInput = input.ToLower().Replace(" ", ":");
-        return parsedInput;
+        static string ParseInput(string input)
+        {
+            return input.ToLower().Replace(" ", ":");
+        }
     }
 }
