@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -33,9 +33,9 @@ namespace client
                     Console.WriteLine(serverMessage);
                 }
 
-                 Console.WriteLine("Possible commands:");
-                 Console.WriteLine("login <username> <password>");
-                 Console.WriteLine("new <username> <password>");
+                Console.WriteLine("Possible commands:");
+                Console.WriteLine("login <username> <password>");
+                Console.WriteLine("new <username> <password>");
                 string message = Console.ReadLine()!;
 
                 // logik för commands
