@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -9,8 +10,6 @@ namespace server
 {
     class Program
     {
-
-        // Man ska kunna skriva tex "private <user> <message> för att skicka privata meddelanden
         static void Main(string[] args)
         {
             IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
@@ -58,19 +57,13 @@ namespace server
         }
 
         static void SendMessageCommand(IMongoCollection<UserModel> usersCollection) 
-        {                                                // Kommando <mottagare> <meddelandet>
+        {
             Console.WriteLine("To send messages privately: 'private <user> <message>'");
             string? command = Console.ReadLine();
 
-            if (string.IsNullOrWhiteSpace(command)) 
-            {
-                Console.WriteLine("Invalid command. Please try again.");
-                return;
-            }
-
             string[] splitParts = command.Split(' ');
 
-            if (splitParts.Length < 3 || splitParts[0] != "private") 
+            if (splitParts.Length < 3) 
             {
                 Console.WriteLine("Invalid command. Please use the format previously displayed.");
                 return;
@@ -79,28 +72,23 @@ namespace server
             string? receiverName = splitParts[1];
 
             UserModel ? receiver = FindUser(usersCollection, receiverName);
-            if (receiver == null) 
-            {
-                Console.WriteLine($"User: '{receiverName}' not found.");
-                return;
-            }
 
             string? message = string.Join(' ', splitParts[2..]);
 
             // Ändra till den som är "inloggad" istället för hårdkodad "Gud" som sender.
-            string? senderName = "Server";
+            string? senderName = "Gud";
             UserModel ? sender = FindUser(usersCollection, senderName);
-            if (sender == null) 
+        
+            if (string.IsNullOrWhiteSpace(command) || !command.StartsWith("private") || receiver == null || sender == null) 
             {
-                Console.WriteLine($"User: '{senderName}' not found.");
+                Console.WriteLine($"Invalid command || User: {receiverName} not found || User: '{senderName}' not found. Please try again.");            
                 return;
             }
 
             SendMessage(sender, receiver, message);
-            Console.WriteLine($"Message sent from {senderName}");
+            Console.WriteLine($"Message sent from {senderName} to {receiverName}");
         }
         
-
         static UserModel ? FindUser(IMongoCollection<UserModel> usersCollection, string? username) 
         {
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
