@@ -181,7 +181,7 @@ namespace server
         {
             try
             {
-                while (true)
+                while (_LoggedIn)
                 {
                     byte[] incoming = new byte[5000];
                     int read = clientSocket.Receive(incoming);
@@ -198,6 +198,7 @@ namespace server
                         {
                             // TODO: fixa så att detta hanteras på samma sätt som socketExceptionen nedanför
                             HandleLogout(username);
+                            Console.WriteLine($"User {username} logged out.");
                         }
                     }
                     else
@@ -205,6 +206,7 @@ namespace server
                         Console.WriteLine($"{username}: {message}");
                     }
                 }
+                return;
             }
             catch (SocketException)
             {
