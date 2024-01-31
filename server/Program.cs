@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Security;
@@ -118,6 +118,20 @@ namespace server
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
             var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, false);
             database.GetCollection<UserModel>("users").UpdateOne(filter, update);
+        }
+
+        public void CreateNewUser(string username, string password) {
+            var usersCollection = database.GetCollection<UserModel>("users");
+            UserModel newUser = new UserModel {Username = username, Password = password, LoggedIn = false};
+            usersCollection.InsertOne(newUser);
+        }
+
+        public bool CheckTaken(string username) {
+            var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
+            var user = database.GetCollection<UserModel>("users").Find(filter).Any();
+          
+          return user;
+
         }
 
         private void ConsoleInputThread()
@@ -257,13 +271,42 @@ namespace server
                         clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
                     }
                 }
+                     else if (message.StartsWith("new:")) {
+                            string[] newUserData = message.Substring(4).Split(':');
+                            string newUsername = newUserData[0];
+                            string newPassword = newUserData[1];
+
+                                if (CheckTaken(newUsername)){
+
+                                    clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("username already taken!"));
+                                } 
+                                else
+                                {
+                                    CreateNewUser(newUsername, newPassword);
+                                    clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("new user created!"));
+                                }
+                                }
             }
         }
+
+
+
 
         private void HandleLogout(string username)
         {
             chatServer.HandleLogout(username);
         }
+        private void CreateNewUser(string username, string password)
+        {
+           chatServer.CreateNewUser(username, password);
+        }
+        private bool CheckTaken(string username)
+        {
+           bool taken = chatServer.CheckTaken(username);
+           return taken;
+           
+        }
+
     }
 
     public class UserModel
@@ -283,3 +326,14 @@ namespace server
         }
     }
 }
+   
+
+
+
+
+   
+
+
+
+
+       
