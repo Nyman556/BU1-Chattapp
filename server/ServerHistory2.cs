@@ -1,27 +1,22 @@
+using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using System.Collections.Generic;
-using System.Globalization;
-
 
 namespace server;
-abstract public class LogMessages
+
+public abstract class LogMessages
 {
     public string? Message { get; set; }
     public DateTime Timestamp { get; set; }
-
 }
 
-
-public class PrivateLog : LogMessages
-{
-    public string? UserName;
-}
+public class PrivateLog : LogMessages { }
 
 public class PublicLog : LogMessages
 {
@@ -37,8 +32,6 @@ class HistoryService
     public IMongoCollection<PublicLog> PubCollection;
 
     public List<PrivateLog> PrivateMessages { get; set; }
-    public List<PublicLog> PublicMessages { get; set; }
-
 
     public HistoryService()
     {
@@ -47,14 +40,11 @@ class HistoryService
         this.PrivCollection = this.database.GetCollection<PrivateLog>("PrivateMessage");
         this.PubCollection = this.database.GetCollection<PublicLog>("PublicMessage");
 
-        this.PublicMessages = new List<PublicLog>();
         this.PrivateMessages = new List<PrivateLog>();
     }
 
-
     public void SaveMessage(string message, string username)
     {
-
         List<string> splitMessage = message.Split(' ').ToList();
         if (splitMessage != null)
         {
@@ -62,11 +52,9 @@ class HistoryService
 
             if (PrivateOrPublic == "public")
             {
-
                 splitMessage.Remove(splitMessage[0]);
                 string joinedMessage = string.Join(" ", splitMessage);
                 SavePublicMessage(joinedMessage, username);
-
             }
             else if (PrivateOrPublic == "private")
             {
@@ -80,52 +68,65 @@ class HistoryService
 
     public void SavePublicMessage(string message, string username)
     {
-        var log = new PublicLog { Message = username + ": " + message, Timestamp = GetTimeStamp("Central European Standard Time") };
-
-        if (this.PublicMessages.Count <= 29)
+        var log = new PublicLog
         {
-
-            this.PublicMessages.Add(log);
-
-        }
-        else if (this.PublicMessages.Count > 29)
+            Message = username + ": " + message,
+            Timestamp = GetTimeStamp("Central European Standard Time")
+        };
+        var PublicMessages = GetPublicLog();
+        if (PublicMessages.Count <= 29)
         {
-            this.PublicMessages.Remove(this.PublicMessages[0]);
-            this.PublicMessages.Add(log);
-
+            this.PubCollection.InsertOne(log);
         }
-          savePublicLogToDataBase();
-      
+        else if (PublicMessages.Count > 29)
+        {
+            DeleteFirstLogMessage();
+            this.PubCollection.InsertOne(log);
+        }
+    }
 
+    public void DeleteFirstLogMessage()
+    {
+        var filter = Builders<PublicLog>.Filter.Empty;
+        var sort = Builders<PublicLog>.Sort.Ascending(entry => entry.Timestamp);
 
+        var firstLogMessages = PubCollection.Find(filter).Sort(sort).FirstOrDefault();
+
+        if (firstLogMessages != null)
+        {
+            var deleteFilter = Builders<PublicLog>.Filter.Eq(
+                message => message.Timestamp,
+                firstLogMessages.Timestamp
+            );
+            PubCollection.DeleteOne(deleteFilter);
+        }
     }
 
     public void SavePrivateMessage(string message, string username)
     {
-        var log = new PrivateLog { Message = username + ": " + message, Timestamp = GetTimeStamp("Central European Standard Time") };
+        var log = new PrivateLog
+        {
+            Message = username + ": " + message,
+            Timestamp = GetTimeStamp("Central European Standard Time")
+        };
         if (this.PrivateMessages.Count <= 29)
         {
             this.PrivateMessages.Add(log);
-
         }
         else if (this.PrivateMessages.Count > 29)
         {
             this.PrivateMessages.Remove(this.PrivateMessages[0]);
             this.PrivateMessages.Add(log);
-
         }
-
-    }
-    public List<PrivateLog> GetPrivateList()
-    {
-        return this.PrivateMessages;
     }
 
-
-    public void saveNewUser(IMongoCollection<UserModel> userCollection, string UserName, string password)
+    public void saveNewUser(
+        IMongoCollection<UserModel> userCollection,
+        string UserName,
+        string password
+    )
     {
         UserModel newUser = new UserModel { Username = UserName, Password = password };
-
 
         foreach (var logs in this.PrivateMessages)
         {
@@ -133,12 +134,18 @@ class HistoryService
         }
         userCollection.InsertOne(newUser);
     }
-    public void savePublicLogToDataBase()
+
+    public List<PublicLog> GetPublicLog()
     {
-        //spara listan till databasen 
-        this.PubCollection.InsertMany(this.PublicMessages);
+        var filter = Builders<PublicLog>.Filter.Empty;
+        var logMessage = this.PubCollection.Find(filter).ToList();
+        return logMessage;
     }
-    public List<PrivateLog> GetPrivateLog(IMongoCollection<UserModel> userCollection, string username)
+
+    public List<PrivateLog> GetPrivateLog(
+        IMongoCollection<UserModel> userCollection,
+        string username
+    )
     {
         var filter = Builders<UserModel>.Filter.Eq(Log => Log.Username, username);
         var user = userCollection.Find(filter).FirstOrDefault();
@@ -151,12 +158,6 @@ class HistoryService
         return new List<PrivateLog>();
     }
 
-    public List<PublicLog> GetPublicLog()
-    {
-        var filter = Builders<PublicLog>.Filter.Empty;
-        var logMessage = this.PubCollection.Find(filter).ToList();
-        return logMessage;
-    }
     public void UpdatePrivetLog(IMongoCollection<UserModel> userCollection, string UserName)
     {
         var filter = Builders<UserModel>.Filter.Eq(User => User.Username, UserName);
@@ -164,18 +165,14 @@ class HistoryService
 
         // Perform the update on the list of objects that match the filter
         var result = userCollection.UpdateMany(filter, update);
-
     }
 
-      public DateTime GetTimeStamp(string timeZone)
+    public DateTime GetTimeStamp(string timeZone)
     {
         DateTime timeUtc = DateTime.UtcNow;
 
         TimeZoneInfo zone = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
         DateTime timeDate = TimeZoneInfo.ConvertTimeFromUtc(timeUtc, zone);
         return timeDate;
-
-
     }
-
 }
