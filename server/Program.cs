@@ -20,26 +20,29 @@ class Program
         MongoClient mongoClient = new MongoClient("mongodb://localhost:27017");
         IMongoDatabase database = mongoClient.GetDatabase("mongoTest");
 
-        var usersCollection = database.GetCollection<UserModel>("users");
+         var usersCollection = database.GetCollection<UserModel>("users");
+
+        // historyService.saveNewUser(usersCollection, "Berit", "ggg");
+        for(int i  =0; i < 35; i++){
+           historyService.SaveMessage("public hej där!" + i, "Berit"); 
+        }
+         
+
+        // historyService.SaveMessage("private hej Berit!", "Frank");
+
+        // historyService.SaveMessage("private vad händer jao!", "Berit");
+        // historyService.UpdatePrivetLog(usersCollection, "Berit");
+        // Console.WriteLine("update done!");
+
+        //historyService.GetPrivateLog(usersCollection, "Frank");
 
         //List<PrivateLog> privetMessageList = historyService.GetPrivateList();
         //historyService.saveNewUser(usersCollection, "Greger", "grs");
-     
-   historyService.SaveMessage("public Hej där!" , "Frank");
-        historyService.SaveMessage("private dobidobido", "Philip");
-     
-        historyService.SaveMessage("private dobido", "Philip");
-        historyService.SaveMessage("private doobido", "Philip");
 
-        
-     
 
-        historyService.UpdatePrivetLog(usersCollection, "Frank");
-         historyService.UpdatePrivetLog(usersCollection, "Greger");
-
-        Console.WriteLine("update is done!");
         // var publicLogs = historyService.GetPublicLog();
-        // var privateLogs = historyService.GetPrivateLog(usersCollection, "Fredrik");
+        // var privateLogs = historyService.GetPrivateLog(usersCollection, "Frank");
+        // var beritsLog= historyService.GetPrivateLog(usersCollection, "Berit");
 
 
         // Console.WriteLine("Public Logs:");
@@ -48,13 +51,40 @@ class Program
         //     Console.WriteLine($"{log.Timestamp}: {log.Message}");
         // }
 
-        // Console.WriteLine("\nPrivate Logs:");
-        // foreach (var log in privateLogs)
-        // {
-        //     Console.WriteLine($"{log.Timestamp}: {log.UserName} - {log.Message}");
-        // }
+//         Console.WriteLine("\nPrivate Logs:");
+//         foreach (var log in privateLogs)
+//         {
+//             Console.WriteLine($"{log.Timestamp}: {log.UserName} - {log.Message}");
+//         }
 
+//   var usersCollection = database.GetCollection<UserModel>("users");
 
+//     var privateLogs = historyService.GetPrivateLog(usersCollection, "Fredrik");
+
+    // Console.WriteLine("\nPrivate Logs:");
+    // if (privateLogs != null)
+    // {
+    //     foreach (var log in privateLogs)
+    //     {
+    //         Console.WriteLine($"{log.Timestamp}:  {log.Message}");
+    //     }
+    // }
+    // else
+    // {
+    //     Console.WriteLine("No private logs found for the specified user.");
+    // }
+    //  Console.WriteLine("\nberits Logs:");
+    // if (beritsLog != null)
+    // {
+    //     foreach (var log in beritsLog)
+    //     {
+    //         Console.WriteLine($"{log.Timestamp}:  {log.Message}");
+    //     }
+    // }
+    // else
+    // {
+    //     Console.WriteLine("No private logs found for the specified user.");
+    // }
         // historyService.UpdatePrivetLog(usersCollection, "Fredrik");
 
 

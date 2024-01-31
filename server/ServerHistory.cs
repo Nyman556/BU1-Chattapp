@@ -93,7 +93,11 @@
 //     // skapar en list av Log meddelande eftersom vi inte vet hur många användare som 
 //     //kommer vara kopplade till chatten
 
-
+    // public void savePublicLogToDataBase()
+    // {
+    //     //spara listan till databasen 
+    //     this.PubCollection.InsertMany(this.PublicMessages);
+    // }
 
 // }
 

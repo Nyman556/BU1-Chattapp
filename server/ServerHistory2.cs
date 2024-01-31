@@ -20,7 +20,7 @@ abstract public class LogMessages
 
 public class PrivateLog : LogMessages
 {
-    public string? UserName;
+  
 }
 
 public class PublicLog : LogMessages
@@ -37,7 +37,7 @@ class HistoryService
     public IMongoCollection<PublicLog> PubCollection;
 
     public List<PrivateLog> PrivateMessages { get; set; }
-    public List<PublicLog> PublicMessages { get; set; }
+  
 
 
     public HistoryService()
@@ -47,7 +47,7 @@ class HistoryService
         this.PrivCollection = this.database.GetCollection<PrivateLog>("PrivateMessage");
         this.PubCollection = this.database.GetCollection<PublicLog>("PublicMessage");
 
-        this.PublicMessages = new List<PublicLog>();
+       
         this.PrivateMessages = new List<PrivateLog>();
     }
 
@@ -81,24 +81,39 @@ class HistoryService
     public void SavePublicMessage(string message, string username)
     {
         var log = new PublicLog { Message = username + ": " + message, Timestamp = GetTimeStamp("Central European Standard Time") };
-
-        if (this.PublicMessages.Count <= 29)
+        var PublicMessages = GetPublicLog();
+        if (PublicMessages.Count <= 29)
         {
 
-            this.PublicMessages.Add(log);
+            this.PubCollection.InsertOne(log);
 
         }
-        else if (this.PublicMessages.Count > 29)
+        else if (PublicMessages.Count > 29)
         {
-            this.PublicMessages.Remove(this.PublicMessages[0]);
-            this.PublicMessages.Add(log);
+            DeleteFirstLogMessage();   
+            this.PubCollection.InsertOne(log);
 
         }
-          savePublicLogToDataBase();
+      
       
 
 
     }
+
+       public void DeleteFirstLogMessage()
+    {
+        var filter = Builders<PublicLog>.Filter.Empty;
+        var sort = Builders<PublicLog>.Sort.Ascending(entry => entry.Timestamp);
+
+        var firstLogMessages = PubCollection.Find(filter).Sort(sort).FirstOrDefault();
+
+        if (firstLogMessages != null)
+        {
+            var deleteFilter = Builders<PublicLog>.Filter.Eq(message => message.Timestamp, firstLogMessages.Timestamp);
+            PubCollection.DeleteOne(deleteFilter);
+        }
+    }
+
 
     public void SavePrivateMessage(string message, string username)
     {
@@ -116,10 +131,7 @@ class HistoryService
         }
 
     }
-    public List<PrivateLog> GetPrivateList()
-    {
-        return this.PrivateMessages;
-    }
+ 
 
 
     public void saveNewUser(IMongoCollection<UserModel> userCollection, string UserName, string password)
@@ -133,30 +145,26 @@ class HistoryService
         }
         userCollection.InsertOne(newUser);
     }
-    public void savePublicLogToDataBase()
-    {
-        //spara listan till databasen 
-        this.PubCollection.InsertMany(this.PublicMessages);
-    }
-    public List<PrivateLog> GetPrivateLog(IMongoCollection<UserModel> userCollection, string username)
-    {
-        var filter = Builders<UserModel>.Filter.Eq(Log => Log.Username, username);
-        var user = userCollection.Find(filter).FirstOrDefault();
-
-        if (user != null)
-        {
-            return user.Log;
-        }
-
-        return new List<PrivateLog>();
-    }
-
-    public List<PublicLog> GetPublicLog()
+   public List<PublicLog> GetPublicLog()
     {
         var filter = Builders<PublicLog>.Filter.Empty;
         var logMessage = this.PubCollection.Find(filter).ToList();
         return logMessage;
     }
+    public List<PrivateLog> GetPrivateLog(IMongoCollection<UserModel> userCollection, string username)
+    {
+        var filter = Builders<UserModel>.Filter.Eq(Log => Log.Username, username);
+        var user = userCollection.Find(filter).FirstOrDefault();
+      
+        if (user != null)
+        {
+            return user.Log;
+        }
+
+        return  new List<PrivateLog>();
+    }
+
+ 
     public void UpdatePrivetLog(IMongoCollection<UserModel> userCollection, string UserName)
     {
         var filter = Builders<UserModel>.Filter.Eq(User => User.Username, UserName);
