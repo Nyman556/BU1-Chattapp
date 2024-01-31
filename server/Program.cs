@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -78,7 +80,7 @@ namespace server
             // detta istället för att hantera samma sak vid Ctrl+c/användare stänger ner programmet/programmet stänger av sig pga ett fel
             var updateAll = Builders<UserModel>.Update.Set(u => u.LoggedIn, false);
             database
-                .GetCollection<UserModel>("users")
+                ?.GetCollection<UserModel>("users")
                 .UpdateMany(Builders<UserModel>.Filter.Empty, updateAll);
         }
 
@@ -122,7 +124,7 @@ namespace server
         {
             while (true)
             {
-                Console.WriteLine("Commands available: userlist"); // lägg till mer commands efter hand
+                Console.WriteLine("\nCommands available: userlist , endserver :"); // lägg till mer commands efter hand
                 string? consoleInput = Console.ReadLine();
 
                 // logik för console Input
@@ -130,6 +132,15 @@ namespace server
                 {
                     PrintAllUsers();
                 }
+                else if (consoleInput == "endserver")
+                {
+                    Console.WriteLine("Server is shuting down...");
+                    Thread.Sleep(1000);
+                    Console.Clear();
+                    Environment.Exit(0);
+                    break;
+                }
+
                 // Låt tråden sova en kort stund för att undvika onödig processorkonsumtion
                 Thread.Sleep(100);
             }
@@ -138,7 +149,7 @@ namespace server
         private void PrintAllUsers()
         {
             var filter = Builders<UserModel>.Filter.Empty;
-            List<UserModel> allUsers = database
+            List<UserModel> allUsers = database!
                 .GetCollection<UserModel>("users")
                 .Find(filter)
                 .ToList();
