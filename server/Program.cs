@@ -228,11 +228,16 @@ namespace server
                     if (message == "logout")
                     {
                         if (username != null)
+                        try
                         {
                             // TODO: fixa så att detta hanteras på samma sätt som socketExceptionen nedanför
                             HandleLogout(username);
                             Console.WriteLine($"User {username} logged out.");
-                            BroadcastToAllClients($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
+                            chatServer.BroadcastNotification($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
+                        }
+                        catch (SocketException)
+                        {
+                            Console.WriteLine($"Error handeling logout for {username}");
                         }
                     }
                     else
@@ -244,14 +249,14 @@ namespace server
             }
             catch (SocketException)
             {
-                Console.WriteLine($"User {username} disconnected.");
-                BroadcastToAllClients($"{username} has disconnected from the server, T_T");
+                Console.WriteLine($"User {username} disconnected.");                
             }
             finally
             {
                 _LoggedIn = false;
                 HandleLogout(username!);
                 clientSocket.Close();
+                chatServer.BroadcastNotification($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
             }
         }
 
@@ -275,7 +280,7 @@ namespace server
                         clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
                         Console.WriteLine($"{username} logged in!");
                         _LoggedIn = true;                        
-                        BroadcastToAllClients($"{username} has connected to the server!"); //Denna fungerar <<<<<<<<<--------------------
+                        chatServer.BroadcastNotification($"{username} has entered the server! so STRONK"); //Denna fungerar <<<<<<<<<--------------------
                     }
                     else
                     {
@@ -328,10 +333,10 @@ namespace server
                 Console.WriteLine($"Failed to send notification to {username}"); /// denna funkar <<<<<
             }
         }  
-        public void BroadcastToAllClients(string message) 
+       /* public void BroadcastToAllClients(string message) 
         {
             chatServer.BroadcastNotification(message);
-        }            
+        }*/            
 
     }
 
