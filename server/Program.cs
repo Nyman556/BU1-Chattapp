@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -178,6 +179,13 @@ namespace server
                 );
             }
         }
+        public void BroadcastNotification(string message) 
+        {
+            foreach (Client client in clients)
+            { 
+            client.SendNotification(message);
+            }
+        }
     }
 
     class Client
@@ -224,11 +232,12 @@ namespace server
                             // TODO: fixa så att detta hanteras på samma sätt som socketExceptionen nedanför
                             HandleLogout(username);
                             Console.WriteLine($"User {username} logged out.");
+                            BroadcastToAllClients($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
                         }
                     }
                     else
                     {
-                        Console.WriteLine($"{username}: {message}");
+                        Console.WriteLine($"{username}: {message}"); //HÄR <-----
                     }
                 }
                 return;
@@ -236,6 +245,7 @@ namespace server
             catch (SocketException)
             {
                 Console.WriteLine($"User {username} disconnected.");
+                BroadcastToAllClients($"{username} has disconnected from the server, T_T");
             }
             finally
             {
@@ -264,7 +274,8 @@ namespace server
                     {
                         clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
                         Console.WriteLine($"{username} logged in!");
-                        _LoggedIn = true;
+                        _LoggedIn = true;                        
+                        BroadcastToAllClients($"{username} has connected to the server!"); //Denna fungerar <<<<<<<<<--------------------
                     }
                     else
                     {
@@ -303,9 +314,24 @@ namespace server
         private bool CheckTaken(string username)
         {
            bool taken = chatServer.CheckTaken(username);
-           return taken;
-           
-        }
+           return taken;           
+        }   
+        public void SendNotification(string message) //////
+        {
+            try 
+            {
+                byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(message);
+                clientSocket.Send(messageBytes);
+            }
+            catch (SocketException) 
+            {
+                Console.WriteLine($"Failed to send notification to {username}"); /// denna funkar <<<<<
+            }
+        }  
+        public void BroadcastToAllClients(string message) 
+        {
+            chatServer.BroadcastNotification(message);
+        }            
 
     }
 
