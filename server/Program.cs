@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Security;
@@ -240,7 +240,7 @@ namespace server
             finally
             {
                 _LoggedIn = false;
-                HandleLogout(username);
+                HandleLogout(username!);
                 clientSocket.Close();
             }
         }
