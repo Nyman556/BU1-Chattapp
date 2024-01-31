@@ -85,7 +85,8 @@ namespace server
                     sockets.Add(client);
                     foreach (Socket otherClient in sockets.Where(c => c != client))
                     {
-                    BroadcastNotification(" A new client has connected! from " + client.RemoteEndPoint);                                        
+                    BroadcastNotification(" A new client has connected! from " + client.RemoteEndPoint); 
+                    client.Send(System.Text.Encoding.UTF8.GetBytes(" Connection established, Welcome to the awesome server, powered by Linux! "));                                       
                     }
                     //client.Send(System.Text.Encoding.UTF8.GetBytes(" Connection established, Welcome to the awesome server, powered by Linux! "));
                     //BroadcastNotification(" Connection established, Welcome to the awesome server, powered by Linux! ");
@@ -106,6 +107,8 @@ namespace server
                 } catch(SocketException ex)
                 {
                     Console.WriteLine("Exception"+ ex);
+                    BroadcastNotification($"A client has disconneted unexpectedly: {client.RemoteEndPoint}");
+                    sockets.Remove(client);
                 }
                 }
                 foreach (Socket client in sockets)
