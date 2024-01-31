@@ -120,18 +120,24 @@ namespace server
             database.GetCollection<UserModel>("users").UpdateOne(filter, update);
         }
 
-        public void CreateNewUser(string username, string password) {
+        public void CreateNewUser(string username, string password)
+        {
             var usersCollection = database.GetCollection<UserModel>("users");
-            UserModel newUser = new UserModel {Username = username, Password = password, LoggedIn = false};
+            UserModel newUser = new UserModel
+            {
+                Username = username,
+                Password = password,
+                LoggedIn = false
+            };
             usersCollection.InsertOne(newUser);
         }
 
-        public bool CheckTaken(string username) {
+        public bool CheckTaken(string username)
+        {
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
             var user = database.GetCollection<UserModel>("users").Find(filter).Any();
-          
-          return user;
 
+            return user;
         }
 
         private void ConsoleInputThread()
@@ -240,7 +246,7 @@ namespace server
             finally
             {
                 _LoggedIn = false;
-                HandleLogout(username);
+                HandleLogout(username!);
                 clientSocket.Close();
             }
         }
@@ -271,42 +277,42 @@ namespace server
                         clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
                     }
                 }
-                     else if (message.StartsWith("new:")) {
-                            string[] newUserData = message.Substring(4).Split(':');
-                            string newUsername = newUserData[0];
-                            string newPassword = newUserData[1];
+                else if (message.StartsWith("new:"))
+                {
+                    string[] newUserData = message.Substring(4).Split(':');
+                    string newUsername = newUserData[0];
+                    string newPassword = newUserData[1];
 
-                                if (CheckTaken(newUsername)){
-
-                                    clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("username already taken!"));
-                                } 
-                                else
-                                {
-                                    CreateNewUser(newUsername, newPassword);
-                                    clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("new user created!"));
-                                }
-                                }
+                    if (CheckTaken(newUsername))
+                    {
+                        clientSocket.Send(
+                            System.Text.Encoding.UTF8.GetBytes("username already taken!")
+                        );
+                    }
+                    else
+                    {
+                        CreateNewUser(newUsername, newPassword);
+                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("new user created!"));
+                    }
+                }
             }
         }
-
-
-
 
         private void HandleLogout(string username)
         {
             chatServer.HandleLogout(username);
         }
+
         private void CreateNewUser(string username, string password)
         {
-           chatServer.CreateNewUser(username, password);
-        }
-        private bool CheckTaken(string username)
-        {
-           bool taken = chatServer.CheckTaken(username);
-           return taken;
-           
+            chatServer.CreateNewUser(username, password);
         }
 
+        private bool CheckTaken(string username)
+        {
+            bool taken = chatServer.CheckTaken(username);
+            return taken;
+        }
     }
 
     public class UserModel
@@ -315,6 +321,7 @@ namespace server
         public bool LoggedIn { get; set; }
         public string? Username { get; set; }
         public string? Password { get; set; }
+        public List<PrivateLog>? Log { get; set; }
     }
 
     class Program
@@ -326,14 +333,3 @@ namespace server
         }
     }
 }
-   
-
-
-
-
-   
-
-
-
-
-       
