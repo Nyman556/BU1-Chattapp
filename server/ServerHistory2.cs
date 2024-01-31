@@ -10,32 +10,22 @@ using System.Globalization;
 
 
 namespace server;
-public class LogMessages
+abstract public class LogMessages
 {
-
-    //skapar ett unikt ID för denna specifika log
-   public ObjectId _id { get; set; }
     public string? Message { get; set; }
     public DateTime Timestamp { get; set; }
-
-    // skapar en list av Log meddelande eftersom vi inte vet hur många användare som 
-    //kommer vara kopplade till chatten
-
-
 
 }
 
 
 public class PrivateLog : LogMessages
 {
-    // söker med user name istället för ObjectId 
-    public string UserName;
-
+    public string? UserName;
 }
 
 public class PublicLog : LogMessages
 {
-
+    public ObjectId _id { get; set; }
 }
 
 class HistoryService
@@ -46,8 +36,8 @@ class HistoryService
 
     public IMongoCollection<PublicLog> PubCollection;
 
-    public List<PrivateLog> PrivateMessages {get; set;}
-    public List<PublicLog> PublicMessages {get; set;}
+    public List<PrivateLog> PrivateMessages { get; set; }
+    public List<PublicLog> PublicMessages { get; set; }
 
 
     public HistoryService()
@@ -62,8 +52,7 @@ class HistoryService
     }
 
 
-
-    public void SplitMessage(string message)
+    public void SaveMessage(string message, string username)
     {
 
         List<string> splitMessage = message.Split(' ').ToList();
@@ -76,7 +65,7 @@ class HistoryService
 
                 splitMessage.Remove(splitMessage[0]);
                 string joinedMessage = string.Join(" ", splitMessage);
-                SavePublicMessage(joinedMessage);
+                SavePublicMessage(joinedMessage, username);
 
             }
             else if (PrivateOrPublic == "private")
@@ -84,16 +73,16 @@ class HistoryService
                 //ev ha med ordet public för att göra det tydligt
                 //   splitMessage.Remove(splitMessage[0]);
                 string joined = string.Join(" ", splitMessage);
-                SavePrivateMessage(joined);
+                SavePrivateMessage(joined, username);
             }
         }
     }
 
-    public void SavePublicMessage(string message)
+    public void SavePublicMessage(string message, string username)
     {
-        var log = new PublicLog { Message = message, Timestamp = GetTimeStamp("W. Europe Standard Time") };
+        var log = new PublicLog { Message = username + ": " + message, Timestamp = GetTimeStamp("Central European Standard Time") };
 
-        ; if (this.PublicMessages.Count <= 29)
+        if (this.PublicMessages.Count <= 29)
         {
 
             this.PublicMessages.Add(log);
@@ -105,13 +94,15 @@ class HistoryService
             this.PublicMessages.Add(log);
 
         }
+          savePublicLogToDataBase();
+      
 
 
     }
 
-    public void SavePrivateMessage(string message)
+    public void SavePrivateMessage(string message, string username)
     {
-        var log = new PrivateLog { Message = message, Timestamp = GetTimeStamp("W. Europe Standard Time") };
+        var log = new PrivateLog { Message = username + ": " + message, Timestamp = GetTimeStamp("Central European Standard Time") };
         if (this.PrivateMessages.Count <= 29)
         {
             this.PrivateMessages.Add(log);
@@ -125,8 +116,58 @@ class HistoryService
         }
 
     }
+    public List<PrivateLog> GetPrivateList()
+    {
+        return this.PrivateMessages;
+    }
 
-    public DateTime GetTimeStamp(string timeZone)
+
+    public void saveNewUser(IMongoCollection<UserModel> userCollection, string UserName, string password)
+    {
+        UserModel newUser = new UserModel { Username = UserName, Password = password };
+
+
+        foreach (var logs in this.PrivateMessages)
+        {
+            newUser.Log.Add(logs);
+        }
+        userCollection.InsertOne(newUser);
+    }
+    public void savePublicLogToDataBase()
+    {
+        //spara listan till databasen 
+        this.PubCollection.InsertMany(this.PublicMessages);
+    }
+    public List<PrivateLog> GetPrivateLog(IMongoCollection<UserModel> userCollection, string username)
+    {
+        var filter = Builders<UserModel>.Filter.Eq(Log => Log.Username, username);
+        var user = userCollection.Find(filter).FirstOrDefault();
+
+        if (user != null)
+        {
+            return user.Log;
+        }
+
+        return new List<PrivateLog>();
+    }
+
+    public List<PublicLog> GetPublicLog()
+    {
+        var filter = Builders<PublicLog>.Filter.Empty;
+        var logMessage = this.PubCollection.Find(filter).ToList();
+        return logMessage;
+    }
+    public void UpdatePrivetLog(IMongoCollection<UserModel> userCollection, string UserName)
+    {
+        var filter = Builders<UserModel>.Filter.Eq(User => User.Username, UserName);
+        var update = Builders<UserModel>.Update.Set(User => User.Log, this.PrivateMessages);
+
+        // Perform the update on the list of objects that match the filter
+        var result = userCollection.UpdateMany(filter, update);
+
+    }
+
+      public DateTime GetTimeStamp(string timeZone)
     {
         DateTime timeUtc = DateTime.UtcNow;
 
@@ -136,26 +177,5 @@ class HistoryService
 
 
     }
-    public void savePrivateLogToDataBase()
-    {
-        //spara listan till databasen 
-        this.PrivCollection.InsertMany(this.PrivateMessages);
-    }
-    public void savePublicLogToDataBase()
-    {
-        //spara listan till databasen 
-        this.PubCollection.InsertMany(this.PublicMessages);
-    }
-    public List<PrivateLog> GetPrivateLog(string username)
-    {
-        var filter = Builders<PrivateLog>.Filter.Eq(Log => Log.UserName, username);
-        var logMessage = this.PrivCollection.Find(filter).ToList();
-        return logMessage;
-    }
-    public List<PublicLog> GetPublicLog()
-    {
-        var filter = Builders<PublicLog>.Filter.Empty;
-        var logMessage = this.PubCollection.Find(filter).ToList();
-        return logMessage;
-    }
+
 }

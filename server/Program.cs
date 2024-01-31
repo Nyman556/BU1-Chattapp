@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿
+
+using System.Net;
 using System.Net.Sockets;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -12,70 +14,63 @@ class Program
     {
 
 
-   // Skapa en instans av HistoryService
+
         var historyService = new HistoryService();
+
+        MongoClient mongoClient = new MongoClient("mongodb://localhost:27017");
+        IMongoDatabase database = mongoClient.GetDatabase("mongoTest");
+
+        var usersCollection = database.GetCollection<UserModel>("users");
+
+        //List<PrivateLog> privetMessageList = historyService.GetPrivateList();
+        //historyService.saveNewUser(usersCollection, "Greger", "grs");
+     
+   historyService.SaveMessage("public Hej där!" , "Frank");
+        historyService.SaveMessage("private dobidobido", "Philip");
+     
+        historyService.SaveMessage("private dobido", "Philip");
+        historyService.SaveMessage("private doobido", "Philip");
+
         
-        // Testa SplitMessage-metoden
-        historyService.SplitMessage("public This is a public message");
-        historyService.SplitMessage("private Joel This is a private message");
-             historyService.SplitMessage("public This is a public message");
-        historyService.SplitMessage("private Philip This is a private message");
-             historyService.SplitMessage("public This is a public message");
-        historyService.SplitMessage("private Hej där!");
-            historyService.SplitMessage("private lalalalalalal");
-                historyService.SplitMessage("private fint sjunget :)");
+     
+
+        historyService.UpdatePrivetLog(usersCollection, "Frank");
+         historyService.UpdatePrivetLog(usersCollection, "Greger");
+
+        Console.WriteLine("update is done!");
+        // var publicLogs = historyService.GetPublicLog();
+        // var privateLogs = historyService.GetPrivateLog(usersCollection, "Fredrik");
 
 
-        Console.WriteLine("we try to split");
-        // Testa att spara loggar i databasen
-        historyService.savePublicLogToDataBase();
-        historyService.savePrivateLogToDataBase();
-        Console.WriteLine("we try saving to data base");
-        // Testa att hämta loggar från databasen
-        var publicLogs = historyService.GetPublicLog();
-        var privateLogs = historyService.GetPrivateLog("John");
-
-        // Skriv ut resultaten
-       Console.WriteLine("Public Logs:"); 
-        foreach (var log in publicLogs)
-        {
-            Console.WriteLine($"{log.Timestamp}: {log.Message}");
-        }
-
-        Console.WriteLine("\nPrivate Logs:")
-        foreach (var log in privateLogs)
-        {
-            Console.WriteLine($"{log.Timestamp}: {log.UserName} - {log.Message}");
-        }
-
-        // MongoClient mongoClient = new MongoClient("mongodb://localhost:27017");
-        // IMongoDatabase database = mongoClient.GetDatabase("mongoTest");
-
-        // // // Hämta eller skapa en samling för användare
-       
-        //  var usersCollection = database.GetCollection<UserModel>("users");
-
-        // var filter = Builders<UserModel>.Filter.Empty;
-        // List<UserModel> allUsers = usersCollection.Find(filter).ToList();
-        
-       
-        
-        // foreach (UserModel user in allUsers)
+        // Console.WriteLine("Public Logs:");
+        // foreach (var log in publicLogs)
         // {
-        
-        //     Console.WriteLine(user.Username);
-        //      Console.WriteLine(user._id);
-           
+        //     Console.WriteLine($"{log.Timestamp}: {log.Message}");
         // }
-        //  foreach (ObjectId id in IDList)
-        
-        //       Console.WriteLine(id);
 
-        //      //Data.SaveLogMessages("hej jag heter Gustav Adolf!", id);
+        // Console.WriteLine("\nPrivate Logs:");
+        // foreach (var log in privateLogs)
+        // {
+        //     Console.WriteLine($"{log.Timestamp}: {log.UserName} - {log.Message}");
         // }
+
+
+        // historyService.UpdatePrivetLog(usersCollection, "Fredrik");
+
+
+        //  UserModel newUser = new UserModel {Username = "Frank", Password = "bbg"};
+
+
+        //  foreach(var logs in privetMessageList){
+        //      newUser.log.Add(logs); 
+        //  } 
+        //  usersCollection.InsertOne(newUser);
+
 
 
        
+
+
         // List<Socket> sockets = new List<Socket>();
         // IPAddress ipAddress = new IPAddress(new byte[] { 127, 0, 0, 1 });
         // IPEndPoint iPEndPoint = new IPEndPoint(ipAddress, 25500);
@@ -89,7 +84,7 @@ class Program
         // serverSocket.Bind(iPEndPoint);
         // serverSocket.Listen(5);
 
-        
+
         // while (true)
         // {
         //     if (serverSocket.Poll(0, SelectMode.SelectRead))
@@ -111,31 +106,17 @@ class Program
         //         }
         //     }
         // }
-        
-       
+
+
     }
 }
 
 class UserModel
 {
-  
-    public ObjectId? _id { get; set; }
+
+    public ObjectId _id { get; set; }
     public string? Username { get; set; }
     public string? Password { get; set; }
-   
+    public List<PrivateLog> Log { get; set; } = new List<PrivateLog>();
+
 }
-
-
-//  UserModel newUser = new UserModel {Username = "Gustav-Adolf", Password = "GRG"};
-        // usersCollection.InsertOne(newUser);
-
-//skapar en ny användare som kan spara alla sina chattkonversationer i en logMessages. 
-//LogMessages i sin tur är kopplade till UserId 
-        class NewUser{
-            List<LogMessages> LogMessage;
-            public NewUser(){
-                LogMessage = new List<LogMessages>();
-            }
-
-          
-        }
