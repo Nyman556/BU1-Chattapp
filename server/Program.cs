@@ -259,8 +259,9 @@ namespace server
         }
 
         private void HandleLogin()
-        {
-            while (!_LoggedIn)
+        { try
+            {
+           while (!_LoggedIn)
             {
                 byte[] incoming = new byte[5000];
                 int read = clientSocket.Receive(incoming);
@@ -309,6 +310,12 @@ namespace server
                 {
                     clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Wrong format!"));
                 }
+            }
+            }
+            catch (SocketException)
+            {
+                Console.WriteLine($"Client disconnected.");
+                clientSocket.Close();
             }
         }
 
