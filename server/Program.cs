@@ -95,10 +95,10 @@ namespace server
             clientTread.Start();
         }
 
-        public bool validateMessage(string message)
+        public bool validateMessage(string message, byte length)
         {
             string[] splitMessage = message.Split(':');
-            return splitMessage.Length == 3;
+            return splitMessage.Length == length;
         }
 
         public bool ValidateCredentials(string username, string password)
@@ -266,7 +266,7 @@ namespace server
                 byte[] incoming = new byte[5000];
                 int read = clientSocket.Receive(incoming);
                 string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-                if (chatServer.validateMessage(message))
+                if (chatServer.validateMessage(message, 3))
                 {
                     if (message.StartsWith("login"))
                     {
