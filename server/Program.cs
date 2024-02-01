@@ -74,8 +74,7 @@ namespace server
         private void Initialize()
         {
             // uppstarts-logik
-            var filter = Builders<UserModel>.Filter.Empty;
-            allUsers = userCollection.Find(filter).ToList();
+            FetchUserData();
 
             // updaterar LoggedIn på samtliga användare till false
             // detta istället för att hantera samma sak vid Ctrl+c/användare stänger ner programmet/programmet stänger av sig pga ett fel
@@ -130,6 +129,8 @@ namespace server
                 LoggedIn = false
             };
             userCollection.InsertOne(newUser);
+            // uppdaterar den globala userList med den nya användaren
+            FetchUserData();
         }
 
         public bool CheckTaken(string username)
@@ -177,6 +178,12 @@ namespace server
                     $"Username: {user.Username}\nPassword: {user.Password}\nCurrently logged in: {(user.LoggedIn ? "Yes" : "No")}"
                 );
             }
+        }
+
+        private List<UserModel> FetchUserData()
+        {
+            var filter = Builders<UserModel>.Filter.Empty;
+            return allUsers = userCollection.Find(filter).ToList();
         }
     }
 
