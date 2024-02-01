@@ -33,9 +33,9 @@ namespace client
                     Console.WriteLine(serverMessage);
                 }
 
-                 Console.WriteLine("Possible commands:");
-                 Console.WriteLine("login <username> <password>");
-                 Console.WriteLine("new <username> <password>");
+                Console.WriteLine("Possible commands:");
+                Console.WriteLine("login <username> <password>");
+                Console.WriteLine("new <username> <password>");
                 string message = Console.ReadLine()!;
 
                 // logik för commands
@@ -59,13 +59,21 @@ namespace client
                     Console.WriteLine("type 'logout' to exit.");
                     while (true)
                     {
+
+                if (clientSocket.Poll(0, SelectMode.SelectRead))
+                    {
+                        serverMessage = ReceiveMessage();
+                        Console.Clear();
+                        Console.WriteLine(serverMessage);
+                    }
                         Console.Write("Message: ");
                         string userMessage = Console.ReadLine()!;
                         if (userMessage == "logout")
                         {
                             byte[] logoutBuffer = Encoding.UTF8.GetBytes(userMessage);
                             clientSocket.Send(logoutBuffer);
-                            break;
+                            Console.Clear();
+                            Environment.Exit(0);
                         }
 
                         byte[] userMessageBuffer = Encoding.UTF8.GetBytes(userMessage);

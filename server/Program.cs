@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using server;
 
 namespace server
 {
@@ -22,7 +23,8 @@ namespace server
         private Socket serverSocket;
 
         // lista med clienter
-        private List<Client> clients;
+        public List<Client> clients;
+        private Client tempClient;
 
         // intern data
         private List<UserModel>? allUsers;
@@ -35,6 +37,8 @@ namespace server
             clients = new List<Client>();
             serverSocket = CreateServerSocket();
         }
+        // 
+       
 
         private Socket CreateServerSocket()
         {
@@ -90,10 +94,15 @@ namespace server
             Socket clientSocket = serverSocket.Accept();
             Console.WriteLine("A client has connected!");
             var client = new Client(clientSocket, this);
-            clients.Add(client);
+            tempClient = client;
 
             Thread clientTread = new Thread(client.Start);
             clientTread.Start();
+        }
+
+        public void AddClient()
+        {
+            clients.Add(tempClient);
         }
 
         public bool ValidateCredentials(string username, string password)
@@ -119,12 +128,14 @@ namespace server
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
             var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, false);
             database.GetCollection<UserModel>("users").UpdateOne(filter, update);
+            
         }
 
         public void CreateNewUser(string username, string password) {
             var usersCollection = database.GetCollection<UserModel>("users");
             UserModel newUser = new UserModel {Username = username, Password = password, LoggedIn = false};
             usersCollection.InsertOne(newUser);
+            
         }
 
         public bool CheckTaken(string username) {
@@ -179,6 +190,7 @@ namespace server
                 );
             }
         }
+        /*
         abstract class Alerter 
         {
             protected Server server;
@@ -204,15 +216,18 @@ namespace server
                 Console.WriteLine($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
             }
         }
-        /* copy
-        public void BroadcastNotification(string message) 
+*/
+        
+        public void BroadcastNotification(string message, Client sender) 
         {
             foreach (Client client in clients)
             { 
-            client.SendNotification(message);
+            if(client != sender)  {
+                client.SendNotification(message);
+            }
             }
         }
-        */
+        
     }
 
     class Client
@@ -242,9 +257,12 @@ namespace server
             HandleLogin();
             if (_LoggedIn)
             {
+                chatServer.AddClient();
                 HandleMessages();
             }
+            
         }
+        
 
         public void HandleMessages()
         {
@@ -269,7 +287,7 @@ namespace server
                             // TODO: fixa så att detta hanteras på samma sätt som socketExceptionen nedanför
                             HandleLogout(username);
                             Console.WriteLine($"User {username} logged out.");
-                            //chatServer.BroadcastNotification($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
+                            chatServer.BroadcastNotification($"---------------\n{username} has disconnected from the server, T_T\n-------------------", this);
                             
                         }
                         catch (SocketException)
@@ -317,7 +335,7 @@ namespace server
                         clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
                         Console.WriteLine($"{username} logged in!");
                         _LoggedIn = true;                        
-                        //chatServer.BroadcastNotification($"{username} has entered the server! so STRONK"); //Denna fungerar <<<<<<<<<--------------------
+                        chatServer.BroadcastNotification($"{username} has entered the server! so STRONK", this); //Denna fungerar <<<<<<<<<--------------------
                         
                         
                     }
