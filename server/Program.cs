@@ -102,13 +102,13 @@ namespace server
                 & Builders<UserModel>.Filter.Eq(u => u.Password, password)
                 // Se till att användaren inte redan är inloggad
                 & Builders<UserModel>.Filter.Eq(u => u.LoggedIn, false);
-            var user = database.GetCollection<UserModel>("users").Find(filter).FirstOrDefault();
+            var user = userCollection.Find(filter).FirstOrDefault();
 
             if (user != null)
             {
                 // updaterar databasen med att användaren är inloggad
                 var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, true);
-                database.GetCollection<UserModel>("users").UpdateOne(filter, update);
+                userCollection.UpdateOne(filter, update);
             }
             return user != null;
         }
@@ -117,25 +117,24 @@ namespace server
         {
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
             var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, false);
-            database.GetCollection<UserModel>("users").UpdateOne(filter, update);
+            userCollection.UpdateOne(filter, update);
         }
 
         public void CreateNewUser(string username, string password)
         {
-            var usersCollection = database.GetCollection<UserModel>("users");
             UserModel newUser = new UserModel
             {
                 Username = username,
                 Password = password,
                 LoggedIn = false
             };
-            usersCollection.InsertOne(newUser);
+            userCollection.InsertOne(newUser);
         }
 
         public bool CheckTaken(string username)
         {
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
-            var user = database.GetCollection<UserModel>("users").Find(filter).Any();
+            var user = userCollection.Find(filter).Any();
 
             return user;
         }
