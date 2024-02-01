@@ -179,6 +179,32 @@ namespace server
                 );
             }
         }
+        abstract class Alerter 
+        {
+            protected Server server;
+            public Alerter(Server server) 
+            {
+                this.server = server;
+            }
+            public abstract void Alert(string username); 
+        }
+        class WelcomeAlert : Alerter
+        {
+            public WelcomeAlert(Server server) : base(server) {}
+            public override void Alert(string username)
+            {
+                Console.WriteLine($"{username} has entered the server! so STRONK");
+            }
+        }
+        class DisconnectAlert : Alerter
+        {
+            public DisconnectAlert(Server server) : base(server)  {}
+            public override void Alert(string username) 
+            {
+                Console.WriteLine($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
+            }
+        }
+        /* copy
         public void BroadcastNotification(string message) 
         {
             foreach (Client client in clients)
@@ -186,6 +212,7 @@ namespace server
             client.SendNotification(message);
             }
         }
+        */
     }
 
     class Client
@@ -194,11 +221,20 @@ namespace server
         private Server chatServer;
         private string? username;
         private bool _LoggedIn = false;
+        
+        
+    
+        
 
         public Client(Socket socket, Server server)
         {
             clientSocket = socket;
             chatServer = server;
+
+           
+            
+            
+
         }
 
         public void Start()
@@ -233,7 +269,8 @@ namespace server
                             // TODO: fixa så att detta hanteras på samma sätt som socketExceptionen nedanför
                             HandleLogout(username);
                             Console.WriteLine($"User {username} logged out.");
-                            chatServer.BroadcastNotification($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
+                            //chatServer.BroadcastNotification($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
+                            
                         }
                         catch (SocketException)
                         {
@@ -256,7 +293,7 @@ namespace server
                 _LoggedIn = false;
                 HandleLogout(username!);
                 clientSocket.Close();
-                chatServer.BroadcastNotification($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
+                //chatServer.BroadcastNotification($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
             }
         }
 
@@ -280,7 +317,9 @@ namespace server
                         clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
                         Console.WriteLine($"{username} logged in!");
                         _LoggedIn = true;                        
-                        chatServer.BroadcastNotification($"{username} has entered the server! so STRONK"); //Denna fungerar <<<<<<<<<--------------------
+                        //chatServer.BroadcastNotification($"{username} has entered the server! so STRONK"); //Denna fungerar <<<<<<<<<--------------------
+                        
+                        
                     }
                     else
                     {
@@ -305,13 +344,19 @@ namespace server
             }
         }
 
-
+       
 
 
         private void HandleLogout(string username)
         {
             chatServer.HandleLogout(username);
+            
+            
         }
+
+        
+
+
         private void CreateNewUser(string username, string password)
         {
            chatServer.CreateNewUser(username, password);
@@ -336,9 +381,19 @@ namespace server
        /* public void BroadcastToAllClients(string message) 
         {
             chatServer.BroadcastNotification(message);
-        }*/            
+        }*/ 
+           
 
     }
+
+    
+
+    /// vad
+    
+
+//vad
+   
+
 
     public class UserModel
     {
