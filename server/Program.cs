@@ -32,6 +32,7 @@ namespace server
             database = mongoClient.GetDatabase("mongoTest");
             userCollection = database.GetCollection<UserModel>("users");
             clients = new List<Client>();
+            allUsers = new List<UserModel>();
             serverSocket = CreateServerSocket();
         }
 
@@ -167,13 +168,7 @@ namespace server
 
         private void PrintAllUsers()
         {
-            var filter = Builders<UserModel>.Filter.Empty;
-            List<UserModel> allUsers = database!
-                .GetCollection<UserModel>("users")
-                .Find(filter)
-                .ToList();
-
-            Console.WriteLine($"({allUsers.Count}) Users in database:");
+            Console.WriteLine($"({allUsers!.Count}) Users in database:");
 
             foreach (UserModel user in allUsers)
             {
