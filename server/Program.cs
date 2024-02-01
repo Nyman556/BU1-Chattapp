@@ -95,6 +95,12 @@ namespace server
             clientTread.Start();
         }
 
+        public bool validateMessage(string message)
+        {
+            string[] splitMessage = message.Split(':');
+            return splitMessage.Length == 3;
+        }
+
         public bool ValidateCredentials(string username, string password)
         {
             var filter =
@@ -259,42 +265,51 @@ namespace server
                 byte[] incoming = new byte[5000];
                 int read = clientSocket.Receive(incoming);
                 string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-                if (message.StartsWith("login:"))
+                if (chatServer.validateMessage(message))
                 {
-                    string[] credentials = message.Substring(6).Split(':');
-                    username = credentials[0];
-                    string password = credentials[1];
-
-                    // TODO: felhantering vid credentials < 2 etc
-
-                    if (chatServer.ValidateCredentials(username, password))
+                    if (message.StartsWith("login"))
                     {
-                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
-                        Console.WriteLine($"{username} logged in!");
-                        _LoggedIn = true;
+                        string[] credentials = message.Substring(6).Split(':');
+                        username = credentials[0];
+                        string password = credentials[1];
+
+                        // TODO: felhantering vid credentials < 2 etc
+
+                        if (chatServer.ValidateCredentials(username, password))
+                        {
+                            clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
+                            Console.WriteLine($"{username} logged in!");
+                            _LoggedIn = true;
+                        }
+                        else
+                        {
+                            clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
+                        }
                     }
-                    else
+                    else if (message.StartsWith("new"))
                     {
-                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
+                        string[] newUserData = message.Substring(4).Split(':');
+                        string newUsername = newUserData[0];
+                        string newPassword = newUserData[1];
+
+                        if (CheckTaken(newUsername))
+                        {
+                            clientSocket.Send(
+                                System.Text.Encoding.UTF8.GetBytes("username already taken!")
+                            );
+                        }
+                        else
+                        {
+                            CreateNewUser(newUsername, newPassword);
+                            clientSocket.Send(
+                                System.Text.Encoding.UTF8.GetBytes("new user created!")
+                            );
+                        }
                     }
                 }
-                else if (message.StartsWith("new:"))
+                else
                 {
-                    string[] newUserData = message.Substring(4).Split(':');
-                    string newUsername = newUserData[0];
-                    string newPassword = newUserData[1];
-
-                    if (CheckTaken(newUsername))
-                    {
-                        clientSocket.Send(
-                            System.Text.Encoding.UTF8.GetBytes("username already taken!")
-                        );
-                    }
-                    else
-                    {
-                        CreateNewUser(newUsername, newPassword);
-                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("new user created!"));
-                    }
+                    clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Wrong format!"));
                 }
             }
         }
