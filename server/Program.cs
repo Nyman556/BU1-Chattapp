@@ -273,8 +273,6 @@ namespace server
                         username = credentials[0];
                         string password = credentials[1];
 
-                        // TODO: felhantering vid credentials < 2 etc
-
                         if (chatServer.ValidateCredentials(username, password))
                         {
                             clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
