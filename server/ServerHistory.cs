@@ -1,99 +1,178 @@
-// using System.Data;
-// using System.Net;
-// using System.Net.Sockets;
-// using System.Text;
-// using System.Text.Json;
-// using MongoDB.Bson;
-// using MongoDB.Driver;
-// using System.Collections.Generic;
-// using System.Globalization;
+using System.Collections.Generic;
+using System.Data;
+using System.Globalization;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
+using MongoDB.Bson;
+using MongoDB.Driver;
 
-// namespace server;
+namespace server;
 
+public abstract class LogMessages
+{
+    public string? Message { get; set; }
+    public DateTime Timestamp { get; set; }
+}
 
-// public class HistoryLog
-// {
-//     public MongoClient mongoClient;
-//     public IMongoDatabase database;
-//     public IMongoCollection<LogMessages> collection;
+public class PrivateLog : LogMessages { }
 
-//     public HistoryLog()
-//     {
-//         this.mongoClient = new MongoClient("mongodb://localhost:27017/");
-//         this.database = this.mongoClient.GetDatabase("mongoTest");
-//         this.collection = this.database.GetCollection<LogMessages>("logMessage");
-//     }
-// // en metod som sparar 30 meddelanden i en log kopplat till en user med ett unikt ID
+public class PublicLog : LogMessages
+{
+    public ObjectId _id { get; set; }
+}
 
+class HistoryService
+{
+    public MongoClient mongoClient;
+    public IMongoDatabase database;
+    public IMongoCollection<PrivateLog> PrivCollection;
 
-//     public void SaveLogMessages(string message, List<ObjectId> user_Id)
-//     {
-//         var list = GetLog(user_Id);
-//         if (list.Count <= 29)
-//         {
-//             LogMessages LogMessages = new LogMessages { Message = message, Timestamp = GetSwedishTime(), UserId = user_Id };
-//             this.collection.InsertOne(LogMessages);
-//         }
-//         else
-//         {
-//             //om det är 29 meddelande i logen så tas det första meddelandet bort innan ett nytt sparas
-//             DeleteFirstLogMessage();
-//             LogMessages LogMessages = new LogMessages { Message = message, Timestamp = GetSwedishTime(), UserId = user_Id };
-//             this.collection.InsertOne(LogMessages);
-//         }
+    public IMongoCollection<PublicLog> PubCollection;
 
-//     }
+    public List<PrivateLog> PrivateMessages { get; set; }
 
+    public HistoryService()
+    {
+        this.mongoClient = new MongoClient("mongodb://localhost:27017/");
+        this.database = this.mongoClient.GetDatabase("mongoTest");
+        this.PrivCollection = this.database.GetCollection<PrivateLog>("PrivateMessage");
+        this.PubCollection = this.database.GetCollection<PublicLog>("PublicMessage");
 
+        this.PrivateMessages = new List<PrivateLog>();
+    }
 
-// //en metod som skriver ut alla meddelanden i en log 
-//     public List<LogMessages> GetLog(List<ObjectId> user_Id)
-//     {
-//         var filter = Builders<LogMessages>.Filter.Eq("UserId", user_Id);
-//         var logMessage = this.collection.Find(filter).ToList();
-//         return logMessage;
-//     }
+    public void SaveMessage(string message, string username)
+    {
+        List<string> splitMessage = message.Split(' ').ToList();
+        if (splitMessage != null)
+        {
+            string PrivateOrPublic = splitMessage[0].ToLower();
 
-// //en metod som tar bort första meddelandet i en log 
-//     public void DeleteFirstLogMessage()
-//     {
-//         var filter = Builders<LogMessages>.Filter.Empty;
-//         var sort = Builders<LogMessages>.Sort.Ascending(entry => entry.Timestamp);
+            if (PrivateOrPublic == "public")
+            {
+                splitMessage.Remove(splitMessage[0]);
+                string joinedMessage = string.Join(" ", splitMessage);
+                SavePublicMessage(joinedMessage, username);
+            }
+            else if (PrivateOrPublic == "private")
+            {
+                //ev ha med ordet public för att göra det tydligt
+                //   splitMessage.Remove(splitMessage[0]);
+                string joined = string.Join(" ", splitMessage);
+                SavePrivateMessage(joined, username);
+            }
+        }
+    }
 
-//         var firstLogMessages = this.collection.Find(filter).Sort(sort).FirstOrDefault();
+    public void SavePublicMessage(string message, string username)
+    {
+        var log = new PublicLog
+        {
+            Message = username + ": " + message,
+            Timestamp = GetTimeStamp("Central European Standard Time")
+        };
+        var PublicMessages = GetPublicLog();
+        if (PublicMessages.Count <= 29)
+        {
+            this.PubCollection.InsertOne(log);
+        }
+        else if (PublicMessages.Count > 29)
+        {
+            DeleteFirstLogMessage();
+            this.PubCollection.InsertOne(log);
+        }
+    }
 
-//         if (firstLogMessages != null)
-//         {
-//             var deleteFilter = Builders<LogMessages>.Filter.Eq(message => message.LogId, firstLogMessages.LogId);
-//             this.collection.DeleteOne(deleteFilter);
-//         }
-//     }
+    public void DeleteFirstLogMessage()
+    {
+        var filter = Builders<PublicLog>.Filter.Empty;
+        var sort = Builders<PublicLog>.Sort.Ascending(entry => entry.Timestamp);
 
-//     public DateTime GetSwedishTime()
-//     {
-//         DateTime timeUtc = DateTime.UtcNow;
+        var firstLogMessages = PubCollection.Find(filter).Sort(sort).FirstOrDefault();
 
-//         TimeZoneInfo estZone = TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time");
-//         DateTime estTime = TimeZoneInfo.ConvertTimeFromUtc(timeUtc, estZone);
-//         return estTime;
+        if (firstLogMessages != null)
+        {
+            var deleteFilter = Builders<PublicLog>.Filter.Eq(
+                message => message.Timestamp,
+                firstLogMessages.Timestamp
+            );
+            PubCollection.DeleteOne(deleteFilter);
+        }
+    }
 
+    public void SavePrivateMessage(string message, string username)
+    {
+        var log = new PrivateLog
+        {
+            Message = username + ": " + message,
+            Timestamp = GetTimeStamp("Central European Standard Time")
+        };
+        if (this.PrivateMessages.Count <= 29)
+        {
+            this.PrivateMessages.Add(log);
+        }
+        else if (this.PrivateMessages.Count > 29)
+        {
+            this.PrivateMessages.Remove(this.PrivateMessages[0]);
+            this.PrivateMessages.Add(log);
+        }
+    }
 
-//     }
+    public void saveNewUser(
+        IMongoCollection<UserModel> userCollection,
+        string UserName,
+        string password
+    )
+    {
+        UserModel newUser = new UserModel { Username = UserName, Password = password };
 
-// }
+        foreach (var logs in this.PrivateMessages)
+        {
+            newUser.Log.Add(logs);
+        }
+        userCollection.InsertOne(newUser);
+    }
 
-// public class LogMessages
-// {
+    public List<PublicLog> GetPublicLog()
+    {
+        var filter = Builders<PublicLog>.Filter.Empty;
+        var logMessage = this.PubCollection.Find(filter).ToList();
+        return logMessage;
+    }
 
-// //skapar ett unikt ID för denna specifika log
-//     public ObjectId LogId { get; set; }
-//     public string? Message { get; set; }
-//     public DateTime Timestamp { get; set; }
+    public List<PrivateLog> GetPrivateLog(
+        IMongoCollection<UserModel> userCollection,
+        string username
+    )
+    {
+        var filter = Builders<UserModel>.Filter.Eq(Log => Log.Username, username);
+        var user = userCollection.Find(filter).FirstOrDefault();
 
-//     // skapar en list av Log meddelande eftersom vi inte vet hur många användare som 
-//     //kommer vara kopplade till chatten
+        if (user != null)
+        {
+            return user.Log;
+        }
 
+        return new List<PrivateLog>();
+    }
 
+    public void UpdatePrivetLog(IMongoCollection<UserModel> userCollection, string UserName)
+    {
+        var filter = Builders<UserModel>.Filter.Eq(User => User.Username, UserName);
+        var update = Builders<UserModel>.Update.Set(User => User.Log, this.PrivateMessages);
 
-// }
+        // Perform the update on the list of objects that match the filter
+        var result = userCollection.UpdateMany(filter, update);
+    }
 
+    public DateTime GetTimeStamp(string timeZone)
+    {
+        DateTime timeUtc = DateTime.UtcNow;
+
+        TimeZoneInfo zone = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
+        DateTime timeDate = TimeZoneInfo.ConvertTimeFromUtc(timeUtc, zone);
+        return timeDate;
+    }
+}
