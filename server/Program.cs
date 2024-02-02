@@ -129,7 +129,7 @@ namespace server
 
             // raderar användaren från listan vid utloggning/disconnect
             Client clientToRemove = clients.FirstOrDefault(client => client.username == username);
-            clients.Remove(clientToRemove);
+            clients.Remove(clientToRemove!);
         }
 
         public void CreateNewUser(string username, string password)
@@ -227,7 +227,7 @@ namespace server
             HandleLogin();
             if (_LoggedIn)
             {
-                chatServer.AddClient(thisClient);
+                chatServer.AddClient(thisClient!);
                 HandleMessages();
             }
             
@@ -258,7 +258,7 @@ namespace server
                     }
                     else
                     {
-                        SendGlobalMessage(username, message);
+                        SendGlobalMessage(username!, message);
                     }
                 }
             }
