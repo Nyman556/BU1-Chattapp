@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -15,13 +15,14 @@ namespace client
             ProtocolType.Tcp
         );
 
+        private static bool loggedIn = false;
+
         static void Main(string[] args)
         {
             clientSocket.Connect(iPEndPoint);
             Console.WriteLine("Connected to server!");
-
-            bool loggedIn = false;
             string serverMessage;
+            Thread listen = new Thread(ListenerThread);
 
             while (true)
             {
@@ -56,22 +57,17 @@ namespace client
 
                 if (loggedIn)
                 {
+                    listen = new Thread(ListenerThread);
+                    listen.Start();
                     Console.WriteLine("type 'logout' to exit.");
                     while (true)
                     {
-
-                if (clientSocket.Poll(0, SelectMode.SelectRead))
-                    {
-                        serverMessage = ReceiveMessage();
-                        Console.Clear();
-                        Console.WriteLine(serverMessage);
-                    }
-                        Console.Write("Message: ");
                         string userMessage = Console.ReadLine()!;
                         if (userMessage == "logout")
                         {
                             byte[] logoutBuffer = Encoding.UTF8.GetBytes(userMessage);
                             clientSocket.Send(logoutBuffer);
+                            loggedIn = false;
                             Console.Clear();
                             Environment.Exit(0);
                         }
@@ -81,7 +77,17 @@ namespace client
                     }
                 }
             }
-            clientSocket.Close();
+
+        static void ListenerThread()
+        {
+            while (loggedIn)
+            {
+            if (clientSocket.Poll(0, SelectMode.SelectRead))
+            {
+                string serverMessage = ReceiveMessage();
+                Console.WriteLine(serverMessage);
+            }
+            }
         }
 
         static string ReceiveMessage()
@@ -90,10 +96,11 @@ namespace client
             int read = clientSocket.Receive(incoming);
             return Encoding.UTF8.GetString(incoming, 0, read);
         }
-
+        
         static string ParseInput(string input)
         {
             return input.ToLower().Replace(" ", ":");
+        }
         }
     }
 }
