@@ -251,7 +251,6 @@ namespace server
                     if (message == "logout")
                     {
                         if (username != null)
-                        try
                         {
                             string _message = $"User {username} logged out.";
                             HandleLogout(username, _message);
@@ -269,7 +268,6 @@ namespace server
                  _LoggedIn = false;
                 HandleLogout(username!, _message);
                 clientSocket.Close();
-                //chatServer.BroadcastNotification($"---------------\n{username} has disconnected from the server, T_T\n-------------------");
             }
         }
 
