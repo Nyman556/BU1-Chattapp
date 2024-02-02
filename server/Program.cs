@@ -24,6 +24,7 @@ namespace server
 
         // lista med clienter
         public List<Client> clients;
+
         // intern data
         private List<UserModel>? allUsers;
 
@@ -36,8 +37,9 @@ namespace server
             allUsers = new List<UserModel>();
             serverSocket = CreateServerSocket();
         }
-        // 
-       
+
+        //
+
 
         private Socket CreateServerSocket()
         {
@@ -128,7 +130,7 @@ namespace server
             userCollection.UpdateOne(filter, update);
 
             // raderar användaren från listan vid utloggning/disconnect
-            Client clientToRemove = clients.FirstOrDefault(client => client.username == username);
+            Client clientToRemove = clients.FirstOrDefault(client => client.username == username)!;
             clients.Remove(clientToRemove!);
         }
 
@@ -168,6 +170,7 @@ namespace server
                 // logik för console Input
                 if (consoleInput == "userlist")
                 {
+                    FetchUserData();
                     PrintAllUsers();
                 }
                 else if (consoleInput == "endserver")
@@ -215,11 +218,6 @@ namespace server
         {
             clientSocket = socket;
             chatServer = server;
-
-           
-            
-            
-
         }
 
         public void Start()
@@ -230,9 +228,7 @@ namespace server
                 chatServer.AddClient(thisClient!);
                 HandleMessages();
             }
-            
         }
-        
 
         public void HandleMessages()
         {
@@ -265,67 +261,72 @@ namespace server
             catch (SocketException)
             {
                 string _message = $"User {username} disconnected.";
-                 _LoggedIn = false;
+                _LoggedIn = false;
                 HandleLogout(username!, _message);
                 clientSocket.Close();
             }
         }
 
         private void HandleLogin()
-        { try
+        {
+            try
             {
-           while (!_LoggedIn)
-            {
-                byte[] incoming = new byte[5000];
-                int read = clientSocket.Receive(incoming);
-                string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-                if (chatServer.validateMessage(message, 3))
+                while (!_LoggedIn)
                 {
-                    if (message.StartsWith("login"))
+                    byte[] incoming = new byte[5000];
+                    int read = clientSocket.Receive(incoming);
+                    string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
+                    if (chatServer.validateMessage(message, 3))
                     {
-                        string[] credentials = message.Substring(6).Split(':');
-                        username = credentials[0];
-                        string password = credentials[1];
+                        if (message.StartsWith("login"))
+                        {
+                            string[] credentials = message.Substring(6).Split(':');
+                            username = credentials[0];
+                            string password = credentials[1];
 
-                        if (chatServer.ValidateCredentials(username, password))
-                        {
-                            clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
-                            _LoggedIn = true;
-                            string _message = $"{username} logged in!";
-                            Console.WriteLine(_message);
-                            Notification(_message);
+                            if (chatServer.ValidateCredentials(username, password))
+                            {
+                                clientSocket.Send(
+                                    System.Text.Encoding.UTF8.GetBytes("Login Success!")
+                                );
+                                _LoggedIn = true;
+                                string _message = $"{username} logged in!";
+                                Console.WriteLine(_message);
+                                Notification(_message);
+                            }
+                            else
+                            {
+                                clientSocket.Send(
+                                    System.Text.Encoding.UTF8.GetBytes("Login Failed!")
+                                );
+                            }
                         }
-                        else
+                        else if (message.StartsWith("new"))
                         {
-                            clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
+                            string[] newUserData = message.Substring(4).Split(':');
+                            string newUsername = newUserData[0];
+                            string newPassword = newUserData[1];
+
+                            if (CheckTaken(newUsername))
+                            {
+                                clientSocket.Send(
+                                    System.Text.Encoding.UTF8.GetBytes("username already taken!")
+                                );
+                            }
+                            else
+                            {
+                                CreateNewUser(newUsername, newPassword);
+                                clientSocket.Send(
+                                    System.Text.Encoding.UTF8.GetBytes("new user created!")
+                                );
+                            }
                         }
                     }
-                    else if (message.StartsWith("new"))
+                    else
                     {
-                        string[] newUserData = message.Substring(4).Split(':');
-                        string newUsername = newUserData[0];
-                        string newPassword = newUserData[1];
-
-                        if (CheckTaken(newUsername))
-                        {
-                            clientSocket.Send(
-                                System.Text.Encoding.UTF8.GetBytes("username already taken!")
-                            );
-                        }
-                        else
-                        {
-                            CreateNewUser(newUsername, newPassword);
-                            clientSocket.Send(
-                                System.Text.Encoding.UTF8.GetBytes("new user created!")
-                            );
-                        }
+                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Wrong format!"));
                     }
                 }
-                else
-                {
-                    clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Wrong format!"));
-                }
-            }
             }
             catch (SocketException)
             {
@@ -341,11 +342,11 @@ namespace server
 
         private void Notification(string message)
         {
-        foreach (Client client in chatServer.clients)
+            foreach (Client client in chatServer.clients)
             {
-                if(client != thisClient) 
+                if (client != thisClient)
                 {
-                client.clientSocket.Send(System.Text.Encoding.UTF8.GetBytes(message));
+                    client.clientSocket.Send(System.Text.Encoding.UTF8.GetBytes(message));
                 }
             }
         }
