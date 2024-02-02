@@ -21,8 +21,7 @@ namespace server
         private Socket serverSocket;
 
         // lista med clienter
-        private List<Client> clients;
-
+        public List<Client> clients;
         // intern data
         private List<UserModel>? allUsers;
 
@@ -87,9 +86,8 @@ namespace server
         private void AcceptNewClients()
         {
             Socket clientSocket = serverSocket.Accept();
-            Console.WriteLine("A client has connected!");
             var client = new Client(clientSocket, this);
-            clients.Add(client);
+            client.thisClient = client;
 
             Thread clientTread = new Thread(client.Start);
             clientTread.Start();
@@ -124,6 +122,10 @@ namespace server
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
             var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, false);
             userCollection.UpdateOne(filter, update);
+
+            // raderar användaren från listan vid utloggning/disconnect
+            Client clientToRemove = clients.FirstOrDefault(client => client.username == username);
+            clients.Remove(clientToRemove);
         }
 
         public void CreateNewUser(string username, string password)
@@ -137,6 +139,11 @@ namespace server
             userCollection.InsertOne(newUser);
             // uppdaterar den globala userList med den nya användaren
             FetchUserData();
+        }
+
+        public void AddClient(Client thisClient)
+        {
+            clients.Add(thisClient);
         }
 
         public bool CheckTaken(string username)
@@ -168,7 +175,6 @@ namespace server
                     break;
                 }
 
-                // Låt tråden sova en kort stund för att undvika onödig processorkonsumtion
                 Thread.Sleep(100);
             }
         }
@@ -197,8 +203,9 @@ namespace server
     {
         private Socket clientSocket;
         private Server chatServer;
-        private string? username;
+        public string? username;
         private bool _LoggedIn = false;
+        public Client? thisClient;
 
         public Client(Socket socket, Server server)
         {
@@ -211,6 +218,7 @@ namespace server
             HandleLogin();
             if (_LoggedIn)
             {
+                chatServer.AddClient(thisClient);
                 HandleMessages();
             }
         }
@@ -224,7 +232,6 @@ namespace server
                     byte[] incoming = new byte[5000];
                     int read = clientSocket.Receive(incoming);
                     string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-
                     if (string.IsNullOrEmpty(message))
                     {
                         break;
@@ -234,26 +241,21 @@ namespace server
                     {
                         if (username != null)
                         {
-                            // TODO: fixa så att detta hanteras på samma sätt som socketExceptionen nedanför
-                            HandleLogout(username);
-                            Console.WriteLine($"User {username} logged out.");
+                            string _message = $"User {username} logged out.";
+                            HandleLogout(username, _message);
                         }
                     }
                     else
                     {
-                        Console.WriteLine($"{username}: {message}");
+                        SendGlobalMessage(username, message);
                     }
                 }
-                return;
             }
             catch (SocketException)
             {
-                Console.WriteLine($"User {username} disconnected.");
-            }
-            finally
-            {
-                _LoggedIn = false;
-                HandleLogout(username!);
+                string _message = $"User {username} disconnected.";
+                 _LoggedIn = false;
+                HandleLogout(username!, _message);
                 clientSocket.Close();
             }
         }
@@ -277,8 +279,10 @@ namespace server
                         if (chatServer.ValidateCredentials(username, password))
                         {
                             clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
-                            Console.WriteLine($"{username} logged in!");
                             _LoggedIn = true;
+                            string _message = $"{username} logged in!";
+                            Console.WriteLine(_message);
+                            Notification(_message);
                         }
                         else
                         {
@@ -314,14 +318,32 @@ namespace server
             }
             catch (SocketException)
             {
-                Console.WriteLine($"Client disconnected.");
                 clientSocket.Close();
             }
         }
 
-        private void HandleLogout(string username)
+        private void SendGlobalMessage(string username, string message)
+        {
+            string _message = $"{username}: {message}";
+            Notification(_message);
+        }
+
+        private void Notification(string message)
+        {
+        foreach (Client client in chatServer.clients)
+            {
+                if(client != thisClient) 
+                {
+                client.clientSocket.Send(System.Text.Encoding.UTF8.GetBytes(message));
+                }
+            }
+        }
+
+        private void HandleLogout(string username, string message)
         {
             chatServer.HandleLogout(username);
+            Console.WriteLine(message);
+            Notification(message);
         }
 
         private void CreateNewUser(string username, string password)
