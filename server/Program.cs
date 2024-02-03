@@ -25,13 +25,14 @@ namespace server
 
         // intern data
         private List<UserModel>? allUsers;
-
+        HistoryService historyService = new HistoryService();
         public Server()
         {
             mongoClient = new MongoClient("mongodb://localhost:27017");
             database = mongoClient.GetDatabase("mongoTest");
             userCollection = database.GetCollection<UserModel>("users");
             clients = new List<Client>();
+            allUsers = new List<UserModel>();
             serverSocket = CreateServerSocket();
         }
 
@@ -73,8 +74,7 @@ namespace server
         private void Initialize()
         {
             // uppstarts-logik
-            var filter = Builders<UserModel>.Filter.Empty;
-            allUsers = userCollection.Find(filter).ToList();
+            FetchUserData();
 
             // updaterar LoggedIn på samtliga användare till false
             // detta istället för att hantera samma sak vid Ctrl+c/användare stänger ner programmet/programmet stänger av sig pga ett fel
@@ -95,6 +95,12 @@ namespace server
             clientTread.Start();
         }
 
+        public bool validateMessage(string message, byte length)
+        {
+            string[] splitMessage = message.Split(':');
+            return splitMessage.Length == length;
+        }
+
         public bool ValidateCredentials(string username, string password)
         {
             var filter =
@@ -102,22 +108,36 @@ namespace server
                 & Builders<UserModel>.Filter.Eq(u => u.Password, password)
                 // Se till att användaren inte redan är inloggad
                 & Builders<UserModel>.Filter.Eq(u => u.LoggedIn, false);
-            var user = database.GetCollection<UserModel>("users").Find(filter).FirstOrDefault();
+            var user = userCollection.Find(filter).FirstOrDefault();
 
             if (user != null)
             {
                 // updaterar databasen med att användaren är inloggad
                 var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, true);
-                database.GetCollection<UserModel>("users").UpdateOne(filter, update);
+                userCollection.UpdateOne(filter, update);
             }
             return user != null;
         }
 
         public void HandleLogout(string username)
         {
+            historyService.UpdatePrivetLog(username);
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
             var update = Builders<UserModel>.Update.Set(v => v.LoggedIn, false);
-            database.GetCollection<UserModel>("users").UpdateOne(filter, update);
+            userCollection.UpdateOne(filter, update);
+        }
+
+        public void CreateNewUser(string username, string password)
+        {
+            UserModel newUser = new UserModel
+            {
+                Username = username,
+                Password = password,
+                LoggedIn = false
+            };
+            userCollection.InsertOne(newUser);
+            // uppdaterar den globala userList med den nya användaren
+            FetchUserData();
         }
 
         public void HandlePrivateMessage(string username, string message) 
@@ -130,56 +150,51 @@ namespace server
                 return;
             }
 
+            // private <user> <message>
+
             string? receiverName = splitMessage[1];
+            bool found = false;
 
-            UserModel ? receiver = FindUser(userCollection, receiverName);
-
-            string? privateMessage = string.Join(' ', splitMessage[2]);
+            string? privateMessage = string.Join(' ', splitMessage[2..]);
 
             string? senderName = username;
-
-            UserModel ? sender = FindUser(userCollection, senderName);
-
-            //SendPrivateMessage(sender, receiver, privateMessage);
-            if (userCollection != receiverName) 
-            {
-                Console.WriteLine($"Message sent from {senderName} to {receiverName}");
+    
+            foreach (UserModel user in allUsers)
+            {                
+                Console.WriteLine("Checking user: " + user.Username);
+                if (receiverName == user.Username) 
+                {
+                    found = true;
+                    Console.WriteLine("User found: " + user.Username);
+                    Console.WriteLine("Sender: " + username);
+                    Console.WriteLine("Receiver: " + user.Username);
+                    Console.WriteLine("Message: " + privateMessage);
+                    break;
+                }
             }
-            
-        }
 
-        static UserModel ? FindUser(IMongoCollection<UserModel> usersCollection, string? username) 
-        {
-            var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
-            return usersCollection.Find(filter).FirstOrDefault();
-        }
-/*
-        static void SendPrivateMessage(UserModel sender, UserModel receiver, string privateMessage) 
-        {
-            receiver.Log.Add($"From {sender.Username}: '{privateMessage}'");
-
-            var updateReceiver = Builders<UserModel>.Update.Set(u => u.Log, receiver.Log);
-            var filterReceiver = Builders<UserModel>.Filter.Eq(u => u.Username, receiver.Username);
-
-            userCollection.UpdateOne(filterReceiver, updateReceiver);
-        }
-*/
-        public void CreateNewUser(string username, string password)
-        {
-            var usersCollection = database.GetCollection<UserModel>("users");
-            UserModel newUser = new UserModel
+            if (!found) 
             {
-                Username = username,
-                Password = password,
-                LoggedIn = false
-            };
-            usersCollection.InsertOne(newUser);
+                Console.WriteLine("User not found");
+                
+            }
+          SendPrivateMessage(senderName, receiverName, privateMessage);
+            //Console.WriteLine(senderName);
+            //Console.WriteLine(receiverName);
+            //Console.WriteLine(privateMessage);
+        }
+
+        static void SendPrivateMessage(string senderName, string receiverName, string privateMessage) 
+        {
+            HistoryService historyService = new HistoryService();
+            historyService.SavePrivateLog(senderName, receiverName, privateMessage);
+            Console.WriteLine("Sent private message");
         }
 
         public bool CheckTaken(string username)
         {
             var filter = Builders<UserModel>.Filter.Eq(u => u.Username, username);
-            var user = database.GetCollection<UserModel>("users").Find(filter).Any();
+            var user = userCollection.Find(filter).Any();
 
             return user;
         }
@@ -212,13 +227,7 @@ namespace server
 
         private void PrintAllUsers()
         {
-            var filter = Builders<UserModel>.Filter.Empty;
-            List<UserModel> allUsers = database!
-                .GetCollection<UserModel>("users")
-                .Find(filter)
-                .ToList();
-
-            Console.WriteLine($"({allUsers.Count}) Users in database:");
+            Console.WriteLine($"({allUsers!.Count}) Users in database:");
 
             foreach (UserModel user in allUsers)
             {
@@ -228,6 +237,12 @@ namespace server
                 );
             }
         }
+
+        private List<UserModel> FetchUserData()
+        {
+            var filter = Builders<UserModel>.Filter.Empty;
+            return allUsers = userCollection.Find(filter).ToList();
+        }
     }
 
     class Client
@@ -236,6 +251,7 @@ namespace server
         private Server chatServer;
         private string? username;
         private bool _LoggedIn = false;
+        HistoryService historyService = new HistoryService();
 
         public Client(Socket socket, Server server)
         {
@@ -276,13 +292,14 @@ namespace server
                             Console.WriteLine($"User {username} logged out.");
                         }
                     }
-                    else if (message.StartsWith("private"))
+                    else if (message.StartsWith("private")) 
                     {
                         HandlePrivateMessage(username, message);
                     }
                     else
                     {
                         Console.WriteLine($"{username}: {message}");
+                      
                     }
                 }
                 return;
@@ -300,49 +317,63 @@ namespace server
         }
 
         private void HandleLogin()
-        {
-            while (!_LoggedIn)
+        { try
+            {
+           while (!_LoggedIn)
             {
                 byte[] incoming = new byte[5000];
                 int read = clientSocket.Receive(incoming);
                 string message = System.Text.Encoding.UTF8.GetString(incoming, 0, read);
-                if (message.StartsWith("login:"))
+                if (chatServer.validateMessage(message, 3))
                 {
-                    string[] credentials = message.Substring(6).Split(':');
-                    username = credentials[0];
-                    string password = credentials[1];
-
-                    // TODO: felhantering vid credentials < 2 etc
-
-                    if (chatServer.ValidateCredentials(username, password))
+                    if (message.StartsWith("login"))
                     {
-                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
-                        Console.WriteLine($"{username} logged in!");
-                        _LoggedIn = true;
+                        string[] credentials = message.Substring(6).Split(':');
+                        username = credentials[0];
+                        string password = credentials[1];
+
+                        if (chatServer.ValidateCredentials(username, password))
+                        {
+                            clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Success!"));
+                            Console.WriteLine($"{username} logged in!");
+                            _LoggedIn = true;
+                        }
+                        else
+                        {
+                            clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
+                        }
                     }
-                    else
+                    else if (message.StartsWith("new"))
                     {
-                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Login Failed!"));
+                        string[] newUserData = message.Substring(4).Split(':');
+                        string newUsername = newUserData[0];
+                        string newPassword = newUserData[1];
+
+                        if (CheckTaken(newUsername))
+                        {
+                            clientSocket.Send(
+                                System.Text.Encoding.UTF8.GetBytes("username already taken!")
+                            );
+                        }
+                        else
+                        {
+                            CreateNewUser(newUsername, newPassword);
+                            clientSocket.Send(
+                                System.Text.Encoding.UTF8.GetBytes("new user created!")
+                            );
+                        }
                     }
                 }
-                else if (message.StartsWith("new:"))
+                else
                 {
-                    string[] newUserData = message.Substring(4).Split(':');
-                    string newUsername = newUserData[0];
-                    string newPassword = newUserData[1];
-
-                    if (CheckTaken(newUsername))
-                    {
-                        clientSocket.Send(
-                            System.Text.Encoding.UTF8.GetBytes("username already taken!")
-                        );
-                    }
-                    else
-                    {
-                        CreateNewUser(newUsername, newPassword);
-                        clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("new user created!"));
-                    }
+                    clientSocket.Send(System.Text.Encoding.UTF8.GetBytes("Wrong format!"));
                 }
+            }
+            }
+            catch (SocketException)
+            {
+                Console.WriteLine($"Client disconnected.");
+                clientSocket.Close();
             }
         }
 
@@ -356,15 +387,15 @@ namespace server
             chatServer.CreateNewUser(username, password);
         }
 
+        private void HandlePrivateMessage(string username, string message) 
+        {
+            chatServer.HandlePrivateMessage(username, message);
+        }
+
         private bool CheckTaken(string username)
         {
             bool taken = chatServer.CheckTaken(username);
             return taken;
-        }
-
-        private void HandlePrivateMessage(string username, string message) 
-        {
-            chatServer.HandlePrivateMessage(username, message);
         }
     }
 

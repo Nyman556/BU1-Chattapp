@@ -65,7 +65,8 @@ namespace client
                         {
                             byte[] logoutBuffer = Encoding.UTF8.GetBytes(userMessage);
                             clientSocket.Send(logoutBuffer);
-                            break;
+                            Console.Clear();
+                            Environment.Exit(0);
                         }
 
                         byte[] userMessageBuffer = Encoding.UTF8.GetBytes(userMessage);
@@ -87,6 +88,5 @@ namespace client
         {
             return input.ToLower().Replace(" ", ":");
         }
-
     }
 }
