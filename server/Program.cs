@@ -27,6 +27,7 @@ namespace server
 
         // intern data
         private List<UserModel>? allUsers;
+        public int MessageCount;
 
         public Server()
         {
@@ -36,6 +37,7 @@ namespace server
             clients = new List<Client>();
             allUsers = new List<UserModel>();
             serverSocket = CreateServerSocket();
+            MessageCount = 0;
         }
 
         //
@@ -171,7 +173,7 @@ namespace server
                 if (consoleInput == "userlist")
                 {
                     FetchUserData();
-                    PrintAllUsers();
+                    PrintUserList();
                 }
                 else if (consoleInput == "endserver")
                 {
@@ -186,10 +188,9 @@ namespace server
             }
         }
 
-        private void PrintAllUsers()
+        private void PrintUserList()
         {
             Console.WriteLine($"({allUsers!.Count}) Users in database:");
-
             foreach (UserModel user in allUsers)
             {
                 Console.WriteLine("--------------------------");
@@ -197,6 +198,8 @@ namespace server
                     $"Username: {user.Username}\nPassword: {user.Password}\nCurrently logged in: {(user.LoggedIn ? "Yes" : "No")}"
                 );
             }
+            Console.WriteLine("--------------------------");
+            Console.WriteLine($"Messages sent since server started: {MessageCount}");
         }
 
         private List<UserModel> FetchUserData()
@@ -255,6 +258,7 @@ namespace server
                     else
                     {
                         SendGlobalMessage(username!, message);
+                        chatServer.MessageCount++;
                     }
                 }
             }
