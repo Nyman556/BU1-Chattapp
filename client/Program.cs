@@ -78,29 +78,29 @@ namespace client
                 }
             }
 
-        static void ListenerThread()
-        {
-            while (loggedIn)
+            static void ListenerThread()
             {
-            if (clientSocket.Poll(0, SelectMode.SelectRead))
-            {
-                string serverMessage = ReceiveMessage();
-                Console.WriteLine(serverMessage);
+                while (loggedIn)
+                {
+                    if (clientSocket.Poll(0, SelectMode.SelectRead))
+                    {
+                        string serverMessage = ReceiveMessage();
+                        Console.WriteLine(serverMessage);
+                    }
+                }
             }
-            }
-        }
 
-        static string ReceiveMessage()
-        {
-            byte[] incoming = new byte[5000];
-            int read = clientSocket.Receive(incoming);
-            return Encoding.UTF8.GetString(incoming, 0, read);
-        }
-        
-        static string ParseInput(string input)
-        {
-            return input.ToLower().Replace(" ", ":");
-        }
+            static string ReceiveMessage()
+            {
+                byte[] incoming = new byte[1024];
+                int read = clientSocket.Receive(incoming);
+                return Encoding.UTF8.GetString(incoming, 0, read);
+            }
+
+            static string ParseInput(string input)
+            {
+                return input.ToLower().Replace(" ", ":");
+            }
         }
     }
 }
