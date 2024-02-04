@@ -25,6 +25,9 @@ namespace server
         // lista med clienter
         public List<Client> clients;
 
+        // Service för history
+        public HistoryService historyService;
+
         // intern data
         private List<UserModel>? allUsers;
         public int MessageCount;
@@ -38,6 +41,7 @@ namespace server
             allUsers = new List<UserModel>();
             serverSocket = CreateServerSocket();
             MessageCount = 0;
+            historyService = new HistoryService();
         }
 
         //
@@ -258,6 +262,7 @@ namespace server
                     else
                     {
                         SendGlobalMessage(username!, message);
+                        chatServer.historyService.SavePublicMessage(username!, message);
                         chatServer.MessageCount++;
                     }
                 }
@@ -297,6 +302,16 @@ namespace server
                                 string _message = $"{username} logged in!";
                                 Console.WriteLine(_message);
                                 Notification(_message);
+                                var history = chatServer.historyService.GetPublicLog();
+                                foreach (var logmessage in history)
+                                {
+                                    clientSocket.Send(
+                                        System.Text.Encoding.UTF8.GetBytes(
+                                            $"{logmessage.Message} | {logmessage.Timestamp}"
+                                        )
+                                    );
+                                    Thread.Sleep(100);
+                                }
                             }
                             else
                             {
