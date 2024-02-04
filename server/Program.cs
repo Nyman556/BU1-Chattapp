@@ -170,7 +170,7 @@ namespace server
         {
             while (true)
             {
-                Console.WriteLine("\nCommands available: userlist , endserver :"); // lägg till mer commands efter hand
+                Console.WriteLine("\nCommands available: userlist , clear , endserver :"); // lägg till mer commands efter hand
                 string? consoleInput = Console.ReadLine();
 
                 // logik för console Input
@@ -178,6 +178,10 @@ namespace server
                 {
                     FetchUserData();
                     PrintUserList();
+                }
+                else if (consoleInput == "clear")
+                {
+                    Console.Clear();
                 }
                 else if (consoleInput == "endserver")
                 {
