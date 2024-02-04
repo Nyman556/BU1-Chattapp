@@ -43,7 +43,7 @@ class HistoryService
         this.PrivateMessages = new List<PrivateLog>();
     }
 
-    public void SaveMessage(string message, string username)
+    public void SaveMessage(string username, string message)
     {
         List<string> splitMessage = message.Split(' ').ToList();
         if (splitMessage != null)
@@ -66,7 +66,7 @@ class HistoryService
         }
     }
 
-    public void SavePublicMessage(string message, string username)
+    public void SavePublicMessage(string username, string message)
     {
         var log = new PublicLog
         {
@@ -102,7 +102,7 @@ class HistoryService
         }
     }
 
-    public void SavePrivateMessage(string message, string username)
+    public void SavePrivateMessage(string username, string message)
     {
         var log = new PrivateLog
         {
