@@ -194,10 +194,15 @@ public void SavePrivateLog(string senderName, string receiverName, string messag
 
     public DateTime GetTimeStamp(string timeZone)
     {
-        DateTime timeUtc = DateTime.UtcNow;
+    DateTime timeUtc = DateTime.UtcNow;
 
-        TimeZoneInfo zone = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
-        DateTime timeDate = TimeZoneInfo.ConvertTimeFromUtc(timeUtc, zone);
-        return timeDate;
+    TimeZoneInfo zone = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
+    DateTime timeDate = TimeZoneInfo.ConvertTimeFromUtc(timeUtc, zone);
+
+  
+    timeDate = timeDate.AddHours(1);
+
+    return timeDate;
+    
     }
 }
