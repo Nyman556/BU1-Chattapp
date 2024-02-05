@@ -23,52 +23,54 @@ public class PublicLog : LogMessages
     public ObjectId _id { get; set; }
 }
 
-class HistoryService
+public class HistoryService
 {
+    public Server chatServer;
     public MongoClient mongoClient;
     public IMongoDatabase database;
-    public IMongoCollection<UserModel> userCollection;
+    public IMongoCollection<PrivateLog> PrivCollection;
 
     public IMongoCollection<PublicLog> PubCollection;
 
     public List<PrivateLog> PrivateMessages { get; set; }
 
-    public HistoryService()
+    public HistoryService(Server server)
     {
+        this.chatServer = server;
         this.mongoClient = new MongoClient("mongodb://localhost:27017/");
-        this.database = this.mongoClient.GetDatabase("mongoTest");
-        this.userCollection = this.database.GetCollection<UserModel>("users");
+        this.database = this.mongoClient.GetDatabase("chattApp");
+        this.PrivCollection = this.database.GetCollection<PrivateLog>("PrivateMessage");
         this.PubCollection = this.database.GetCollection<PublicLog>("PublicMessage");
 
         this.PrivateMessages = new List<PrivateLog>();
     }
 
-    // public void SaveMessage(string message, string username)
-    // {
-    //     List<string> splitMessage = message.Split(' ').ToList();
-    //     if (splitMessage != null)
-    //     {
-    //         string PrivateOrPublic = splitMessage[0].ToLower();
+    public void SaveMessage(string username, string message)
+    {
+        List<string> splitMessage = message.Split(' ').ToList();
+        if (splitMessage != null)
+        {
+            string PrivateOrPublic = splitMessage[0].ToLower();
 
-    //         if (PrivateOrPublic == "public")
-    //         {
-    //             splitMessage.Remove(splitMessage[0]);
-    //             string joinedMessage = string.Join(" ", splitMessage);
-    //             SavePublicMessage(joinedMessage, username);
-    //         }
-    //         else if (PrivateOrPublic == "private")
-    //         {
-    //             //ev ha med ordet public för att göra det tydligt
-    //             //   splitMessage.Remove(splitMessage[0]);
-    //             string joined = string.Join(" ", splitMessage);
-    //             SavePrivateMessage(joined, username);
-    //         }
-    //     }
+            if (PrivateOrPublic == "public")
+            {
+                splitMessage.Remove(splitMessage[0]);
+                string joinedMessage = string.Join(" ", splitMessage);
+                SavePublicMessage(joinedMessage, username);
+            }
+            /*
+            else if (PrivateOrPublic == "private")
+            {
+                //ev ha med ordet public för att göra det tydligt
+                //   splitMessage.Remove(splitMessage[0]);
+                string joined = string.Join(" ", splitMessage);
+                SavePrivateLog(joined, username);
+            }
+            */
+        }
+    }
 
-        
-    //}
-
-    public void SavePublicMessage(string username,  string message)
+    public void SavePublicMessage(string username, string message)
     {
         var log = new PublicLog
         {
@@ -106,7 +108,7 @@ class HistoryService
 
 public void SavePrivateLog(string senderName, string receiverName, string message)
 {
-    UserModel receiver = userCollection.AsQueryable().Where(r => r.Username == receiverName).FirstOrDefault();
+    UserModel receiver = chatServer.userCollection.AsQueryable().Where(r => r.Username == receiverName).FirstOrDefault();
 
     if (receiver != null)
     {
@@ -134,7 +136,7 @@ public void SavePrivateLog(string senderName, string receiverName, string messag
         );
         var filter = Builders<UserModel>.Filter.Eq(u => u.Username, receiver.Username);
 
-        this.userCollection.UpdateOne(filter, update);
+        chatServer.userCollection.UpdateOne(filter, update);
     }
     else
     {
@@ -143,16 +145,7 @@ public void SavePrivateLog(string senderName, string receiverName, string messag
     }
 }
 
-       public void UpdatePrivetLog(string receiverName)
-    {
-        var filter = Builders<UserModel>.Filter.Eq(User => User.Username, receiverName);
-        var update = Builders<UserModel>.Update.Set(User => User.Log, this.PrivateMessages);
-
-        // Perform the update on the list of objects that match the filter
-       var result = this.userCollection.UpdateMany(filter, update);
-    }
-
- public void saveNewUser(
+    public void saveNewUser(
         IMongoCollection<UserModel> userCollection,
         string UserName,
         string password
@@ -184,13 +177,21 @@ public void SavePrivateLog(string senderName, string receiverName, string messag
 
         if (user != null)
         {
-            return user.Log;
+            return user.Log!;
         }
 
         return new List<PrivateLog>();
     }
 
- 
+    public void UpdatePrivetLog(IMongoCollection<UserModel> userCollection, string UserName)
+    {
+        var filter = Builders<UserModel>.Filter.Eq(User => User.Username, UserName);
+        var update = Builders<UserModel>.Update.Set(User => User.Log, this.PrivateMessages);
+
+        // Perform the update on the list of objects that match the filter
+        var result = userCollection.UpdateMany(filter, update);
+    }
+
     public DateTime GetTimeStamp(string timeZone)
     {
         DateTime timeUtc = DateTime.UtcNow;
@@ -200,9 +201,3 @@ public void SavePrivateLog(string senderName, string receiverName, string messag
         return timeDate;
     }
 }
-
-
-/*
-
-
-*/
