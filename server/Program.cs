@@ -178,17 +178,13 @@ namespace server
                 Console.WriteLine("User not found");
                 
             }
-          SendPrivateMessage(senderName, receiverName, privateMessage);
-            //Console.WriteLine(senderName);
-            //Console.WriteLine(receiverName);
-            //Console.WriteLine(privateMessage);
+          SendPrivateMessage(senderName, receiverName, privateMessage); 
         }
 
         static void SendPrivateMessage(string senderName, string receiverName, string privateMessage) 
         {
             HistoryService historyService = new HistoryService();
             historyService.SavePrivateLog(senderName, receiverName, privateMessage);
-            Console.WriteLine("Sent private message");
         }
 
         public bool CheckTaken(string username)

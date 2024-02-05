@@ -110,29 +110,24 @@ public void SavePrivateLog(string senderName, string receiverName, string messag
 
     if (receiver != null)
     {
-        // Kontrollera om Log är null, om det är det, skapa en ny lista
         if (receiver.Log == null)
         {
             receiver.Log = new List<PrivateLog>();
         }
 
-        // Skapa ett nytt meddelande
         var newMessage = new PrivateLog
         {
             Message = senderName + ": " + message,
             Timestamp = GetTimeStamp("Central European Standard Time")
         };
 
-        // Lägg till det nya meddelandet till början av Log-listan
         receiver.Log.Insert(0, newMessage);
 
-        // Trimma listan för att behålla endast de senaste 30 meddelandena
-        if (receiver.Log.Count > 30)
+        if (receiver.Log.Count > 29)
         {
-            receiver.Log.RemoveRange(30, receiver.Log.Count - 30);
+            receiver.Log.RemoveRange(29, receiver.Log.Count - 29);
         }
 
-        // Uppdatera databasen med den uppdaterade Log-listan
         var update = Builders<UserModel>.Update.Set(
             u => u.Log,
             receiver.Log
