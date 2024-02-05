@@ -23,7 +23,7 @@ public class PublicLog : LogMessages
     public ObjectId _id { get; set; }
 }
 
-class HistoryService
+public class HistoryService
 {
     public MongoClient mongoClient;
     public IMongoDatabase database;
@@ -36,7 +36,7 @@ class HistoryService
     public HistoryService()
     {
         this.mongoClient = new MongoClient("mongodb://localhost:27017/");
-        this.database = this.mongoClient.GetDatabase("mongoTest");
+        this.database = this.mongoClient.GetDatabase("chattApp");
         this.PrivCollection = this.database.GetCollection<PrivateLog>("PrivateMessage");
         this.PubCollection = this.database.GetCollection<PublicLog>("PublicMessage");
 
@@ -152,7 +152,7 @@ class HistoryService
 
         if (user != null)
         {
-            return user.Log;
+            return user.Log!;
         }
 
         return new List<PrivateLog>();
