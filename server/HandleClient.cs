@@ -57,12 +57,11 @@ public class Client
                         string _message = $"User {username} logged out.";
                         HandleLogout(username, _message);
                     }
-                   
-                } 
-                else if (message.StartsWith("private")) 
-                    {
-                        HandlePrivateMessage(username, message);
-                    }
+                }
+                else if (message.StartsWith("private"))
+                {
+                    HandlePrivateMessage(username, message);
+                }
                 else
                 {
                     SendGlobalMessage(username!, message);
@@ -114,11 +113,21 @@ public class Client
                             }
 
                             // För private messages
-                            var privateLogs = chatServer.historyService.GetPrivateLog(chatServer.userCollection, username!);
-                            foreach (var privateMessage in privateLogs) 
+                            var privateLogs = chatServer.historyService.GetPrivateLog(
+                                chatServer.userCollection,
+                                username!
+                            );
+                            if (privateLogs != null)
                             {
-                                clientSocket.Send(System.Text.Encoding.UTF8.GetBytes($"Private Log: {privateMessage.Message}"));
-                                Thread.Sleep(100);
+                                foreach (var privateMessage in privateLogs)
+                                {
+                                    clientSocket.Send(
+                                        System.Text.Encoding.UTF8.GetBytes(
+                                            $"Private Log: {privateMessage.Message}"
+                                        )
+                                    );
+                                    Thread.Sleep(100);
+                                }
                             }
                         }
                         else
@@ -179,15 +188,16 @@ public class Client
     }
 
     // Ny metod här för att se att det bara skickas till receiver
-    public void PrivateNotification(string receiverName, string senderName, string message) 
+    public void PrivateNotification(string receiverName, string senderName, string message)
     {
-        
-        foreach (Client client in chatServer.clients) 
+        foreach (Client client in chatServer.clients)
         {
             // Kollar användaren
-            if (client.username == receiverName) 
+            if (client.username == receiverName)
             {
-                client.clientSocket.Send(System.Text.Encoding.UTF8.GetBytes($"Private {senderName} : {message}"));
+                client.clientSocket.Send(
+                    System.Text.Encoding.UTF8.GetBytes($"Private {senderName} : {message}")
+                );
             }
         }
     }
@@ -199,10 +209,9 @@ public class Client
         Notification(message);
     }
 
-    private void HandlePrivateMessage(string username, string message) 
+    private void HandlePrivateMessage(string username, string message)
     {
         chatServer.HandlePrivateMessage(username, message, this);
-
     }
 
     private void CreateNewUser(string username, string password)
