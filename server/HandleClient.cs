@@ -112,6 +112,14 @@ public class Client
                                 );
                                 Thread.Sleep(100);
                             }
+
+                            // För private messages
+                            var privateLogs = chatServer.historyService.GetPrivateLog(chatServer.userCollection, username!);
+                            foreach (var privateMessage in privateLogs) 
+                            {
+                                clientSocket.Send(System.Text.Encoding.UTF8.GetBytes($"Private Log: {privateMessage.Message}"));
+                                Thread.Sleep(100);
+                            }
                         }
                         else
                         {
@@ -170,6 +178,20 @@ public class Client
         }
     }
 
+    // Ny metod här för att se att det bara skickas till receiver
+    public void PrivateNotification(string receiverName, string senderName, string message) 
+    {
+        
+        foreach (Client client in chatServer.clients) 
+        {
+            // Kollar användaren
+            if (client.username == receiverName) 
+            {
+                client.clientSocket.Send(System.Text.Encoding.UTF8.GetBytes($"Private {senderName} : {message}"));
+            }
+        }
+    }
+
     private void HandleLogout(string username, string message)
     {
         chatServer.HandleLogout(username);
@@ -179,7 +201,8 @@ public class Client
 
     private void HandlePrivateMessage(string username, string message) 
     {
-        chatServer.HandlePrivateMessage(username, message);
+        chatServer.HandlePrivateMessage(username, message, this);
+
     }
 
     private void CreateNewUser(string username, string password)

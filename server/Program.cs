@@ -162,7 +162,7 @@ public class Server
         return user;
     }
 
-    public void HandlePrivateMessage(string username, string message) 
+    public void HandlePrivateMessage(string username, string message, Client client) 
         {
             string[] splitMessage = message.Split(' ');
 
@@ -195,12 +195,13 @@ public class Server
                 Console.WriteLine("User not found");
                 
             }
-          SendPrivateMessage(senderName, receiverName, privateMessage); 
+          SendPrivateMessage(senderName, receiverName, privateMessage, client); 
         }
 
-        private void SendPrivateMessage(string senderName, string receiverName, string privateMessage) 
+        private void SendPrivateMessage(string senderName, string receiverName, string privateMessage, Client client) 
         {
             historyService.SavePrivateLog(senderName, receiverName, privateMessage);
+            client.PrivateNotification(receiverName, senderName, privateMessage);
         }
 
     private void ConsoleInputThread()

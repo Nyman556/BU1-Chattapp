@@ -60,6 +60,7 @@ namespace client
                     listen = new Thread(ListenerThread);
                     listen.Start();
                     Console.WriteLine("type 'logout' to exit.");
+                    Console.WriteLine("Type 'private <user> <message> to send private messages between users'");
                     while (true)
                     {
                         string userMessage = Console.ReadLine()!;
