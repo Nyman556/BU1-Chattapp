@@ -123,7 +123,7 @@ public class Client
                                 {
                                     clientSocket.Send(
                                         System.Text.Encoding.UTF8.GetBytes(
-                                            $"Private Log: {privateMessage.Message}"
+                                            $"Private {privateMessage.Message} | {privateMessage.Timestamp}"
                                         )
                                     );
                                     Thread.Sleep(100);
