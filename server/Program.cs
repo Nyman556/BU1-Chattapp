@@ -71,7 +71,7 @@ public class Server
         // Server loop
         while (true)
         {
-            if (serverSocket.Poll(0, SelectMode.SelectRead)) 
+            if (serverSocket.Poll(0, SelectMode.SelectRead))
             {
                 AcceptNewClients();
             }
@@ -162,47 +162,51 @@ public class Server
         return user;
     }
 
-    public void HandlePrivateMessage(string username, string message, Client client) 
+    public void HandlePrivateMessage(string username, string message, Client client)
+    {
+        string[] splitMessage = message.Split(' ');
+
+        if (splitMessage.Length < 3)
         {
-            string[] splitMessage = message.Split(' ');
-
-            if (splitMessage.Length < 3) 
-            {
-                Console.WriteLine("Invalid command. Please use the correct format");
-                return;
-            }
-
-            // private <user> <message>
-
-            string? receiverName = splitMessage[1];
-            bool found = false;
-
-            string? privateMessage = string.Join(' ', splitMessage[2..]);
-
-            string? senderName = username;
-    
-            foreach (UserModel user in allUsers)
-            {                
-                if (receiverName == user.Username) 
-                {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found) 
-            {
-                Console.WriteLine("User not found");
-                
-            }
-          SendPrivateMessage(senderName, receiverName, privateMessage, client); 
+            Console.WriteLine("Invalid command. Please use the correct format");
+            return;
         }
 
-        private void SendPrivateMessage(string senderName, string receiverName, string privateMessage, Client client) 
+        // private <user> <message>
+
+        string? receiverName = splitMessage[1];
+        bool found = false;
+
+        string? privateMessage = string.Join(' ', splitMessage[2..]);
+
+        string? senderName = username;
+
+        foreach (UserModel user in allUsers!)
         {
-            historyService.SavePrivateLog(senderName, receiverName, privateMessage);
-            client.PrivateNotification(receiverName, senderName, privateMessage);
+            if (receiverName == user.Username)
+            {
+                found = true;
+                break;
+            }
         }
+
+        if (!found)
+        {
+            Console.WriteLine("User not found");
+        }
+        SendPrivateMessage(senderName, receiverName, privateMessage, client);
+    }
+
+    private void SendPrivateMessage(
+        string senderName,
+        string receiverName,
+        string privateMessage,
+        Client client
+    )
+    {
+        historyService.SavePrivateLog(senderName, receiverName, privateMessage);
+        client.PrivateNotification(receiverName, senderName, privateMessage);
+    }
 
     private void ConsoleInputThread()
     {

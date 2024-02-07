@@ -60,7 +60,7 @@ public class Client
                 }
                 else if (message.StartsWith("private"))
                 {
-                    HandlePrivateMessage(username, message);
+                    HandlePrivateMessage(username!, message);
                 }
                 else
                 {
@@ -113,17 +113,14 @@ public class Client
                             }
 
                             // För private messages
-                            var privateLogs = chatServer.historyService.GetPrivateLog(
-                                chatServer.userCollection,
-                                username!
-                            );
+                            var privateLogs = chatServer.historyService.GetPrivateLog(username!);
                             if (privateLogs != null)
                             {
                                 foreach (var privateMessage in privateLogs)
                                 {
                                     clientSocket.Send(
                                         System.Text.Encoding.UTF8.GetBytes(
-                                            $"Private {privateMessage.Message} | {privateMessage.Timestamp}"
+                                            $"Private Log: {privateMessage.Message} || {privateMessage.Timestamp}"
                                         )
                                     );
                                     Thread.Sleep(100);
