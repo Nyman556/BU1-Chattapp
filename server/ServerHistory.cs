@@ -45,30 +45,7 @@ public class HistoryService
         this.PrivateMessages = new List<PrivateLog>();
     }
 
-    public void SaveMessage(string username, string message)
-    {
-        List<string> splitMessage = message.Split(' ').ToList();
-        if (splitMessage != null)
-        {
-            string PrivateOrPublic = splitMessage[0].ToLower();
-
-            if (PrivateOrPublic == "public")
-            {
-                splitMessage.Remove(splitMessage[0]);
-                string joinedMessage = string.Join(" ", splitMessage);
-                SavePublicMessage(joinedMessage, username);
-            }
-            /*
-            else if (PrivateOrPublic == "private")
-            {
-                //ev ha med ordet public för att göra det tydligt
-                //   splitMessage.Remove(splitMessage[0]);
-                string joined = string.Join(" ", splitMessage);
-                SavePrivateLog(joined, username);
-            }
-            */
-        }
-    }
+   
 
     public void SavePublicMessage(string username, string message)
     {
@@ -108,7 +85,7 @@ public class HistoryService
 
 public void SavePrivateLog(string senderName, string receiverName, string message)
 {
-    UserModel receiver = chatServer.userCollection.AsQueryable().Where(r => r.Username == receiverName).FirstOrDefault();
+    UserModel? receiver = chatServer.userCollection.AsQueryable().Where(r => r.Username == receiverName!).FirstOrDefault();
 
     if (receiver != null)
     {
@@ -145,20 +122,6 @@ public void SavePrivateLog(string senderName, string receiverName, string messag
     }
 }
 
-    public void saveNewUser(
-        IMongoCollection<UserModel> userCollection,
-        string UserName,
-        string password
-    )
-    {
-        UserModel newUser = new UserModel { Username = UserName, Password = password };
-
-        foreach (var logs in this.PrivateMessages)
-        {
-            newUser.Log.Add(logs);
-        }
-        userCollection.InsertOne(newUser);
-    }
 
     public List<PublicLog> GetPublicLog()
     {
@@ -168,12 +131,12 @@ public void SavePrivateLog(string senderName, string receiverName, string messag
     }
 
     public List<PrivateLog> GetPrivateLog(
-        IMongoCollection<UserModel> userCollection,
+       
         string username
     )
     {
         var filter = Builders<UserModel>.Filter.Eq(Log => Log.Username, username);
-        var user = userCollection.Find(filter).FirstOrDefault();
+        var user = chatServer.userCollection.Find(filter).FirstOrDefault();
 
         if (user != null)
         {
@@ -183,14 +146,7 @@ public void SavePrivateLog(string senderName, string receiverName, string messag
         return new List<PrivateLog>();
     }
 
-    public void UpdatePrivetLog(IMongoCollection<UserModel> userCollection, string UserName)
-    {
-        var filter = Builders<UserModel>.Filter.Eq(User => User.Username, UserName);
-        var update = Builders<UserModel>.Update.Set(User => User.Log, this.PrivateMessages);
-
-        // Perform the update on the list of objects that match the filter
-        var result = userCollection.UpdateMany(filter, update);
-    }
+   
 
     public DateTime GetTimeStamp(string timeZone)
     {
