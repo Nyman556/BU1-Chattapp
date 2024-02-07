@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using MongoDB.Bson;
@@ -109,9 +110,11 @@ public class Server
 
     public bool ValidateCredentials(string username, string password)
     {
+        string hashedPassword = EncryptPassword(password);
+
         var filter =
             Builders<UserModel>.Filter.Eq(u => u.Username, username)
-            & Builders<UserModel>.Filter.Eq(u => u.Password, password)
+            & Builders<UserModel>.Filter.Eq(u => u.Password, hashedPassword)
             // Se till att användaren inte redan är inloggad
             & Builders<UserModel>.Filter.Eq(u => u.LoggedIn, false);
         var user = userCollection.Find(filter).FirstOrDefault();
@@ -123,6 +126,23 @@ public class Server
             userCollection.UpdateOne(filter, update);
         }
         return user != null;
+    }
+
+    private static string EncryptPassword(string password) 
+    {
+        // Något att tänka på. Krypterade lösenorden blir identiska om lösenorden innan kryptering är identiska. dvs "grg" får samma kryptering.
+        using (SHA256 sha256Hash = SHA256.Create()) 
+        {
+            // konverterar lösenordet till en byte array via Encoding.UTF8.GetBytes
+            byte[] hashData = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(password));
+
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < hashData.Length; i++) 
+            {
+                builder.Append(hashData[i].ToString("x2"));
+            }
+            return builder.ToString();
+        }
     }
 
     public void HandleLogout(string username)
@@ -138,10 +158,12 @@ public class Server
 
     public void CreateNewUser(string username, string password)
     {
+        string hashedPassword = EncryptPassword(password);
+
         UserModel newUser = new UserModel
         {
             Username = username,
-            Password = password,
+            Password = hashedPassword,
             LoggedIn = false
         };
         userCollection.InsertOne(newUser);
