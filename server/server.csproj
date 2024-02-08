@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="MongoDB.Driver" Version="2.23.1" />
+    <Reference Include="System.Security.Cryptography.Algorithms" />
   </ItemGroup>
 
 </Project>

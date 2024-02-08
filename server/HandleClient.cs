@@ -110,9 +110,7 @@ public class Client
                             }
 
                             // För private messages
-                            var privateLogs = chatServer.historyService.GetPrivateLog(
-                                username!
-                            );
+                            var privateLogs = chatServer.historyService.GetPrivateLog(username!);
                             if (privateLogs != null)
                             {
                                 foreach (var privateMessage in privateLogs)
@@ -190,15 +188,11 @@ private IEnumerable<LogMessages> OrderByTime(List<LogMessages> list){
 
     private void Notification(string message)
     {
-        
         foreach (Client client in chatServer.clients)
         {
             if (client != thisClient)
-            {   
-            
+            {
                 client.clientSocket.Send(System.Text.Encoding.UTF8.GetBytes(message));
-            
-               
             }
         }
     }
