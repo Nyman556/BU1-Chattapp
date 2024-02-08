@@ -78,7 +78,9 @@ public class Client
     }
 
     private void HandleLogin()
+
     {
+        List<LogMessages> AllLogs = new List<LogMessages>();
         try
         {
             while (!_LoggedIn)
@@ -104,12 +106,7 @@ public class Client
                             var history = chatServer.historyService.GetPublicLog();
                             foreach (var logmessage in history)
                             {
-                                clientSocket.Send(
-                                    System.Text.Encoding.UTF8.GetBytes(
-                                        $"{logmessage.Message} | {logmessage.Timestamp}"
-                                    )
-                                );
-                                Thread.Sleep(100);
+                                AllLogs.Add(logmessage);
                             }
 
                             // För private messages
@@ -120,14 +117,24 @@ public class Client
                             {
                                 foreach (var privateMessage in privateLogs)
                                 {
-                                    clientSocket.Send(
-                                        System.Text.Encoding.UTF8.GetBytes(
-                                            $"Private Log: {privateMessage.Message} || {privateMessage.Timestamp}"
-                                        )
-                                    );
-                                    Thread.Sleep(100);
+                                    
+                                    AllLogs.Add(privateMessage);
+                                   
                                 }
                             }
+                             IEnumerable<LogMessages> AllLogsSort = OrderByTime(AllLogs);
+                            foreach (var log in AllLogsSort)
+                            {
+                                
+                                clientSocket.Send(
+                                    System.Text.Encoding.UTF8.GetBytes(
+                                        $"{log.Message} | {log.Timestamp}"
+                                    )
+                                );
+                               Thread.Sleep(100);
+                            }
+
+
                         }
                         else
                         {
@@ -167,6 +174,12 @@ public class Client
         }
     }
 
+private IEnumerable<LogMessages> OrderByTime(List<LogMessages> list){
+
+    IEnumerable<LogMessages> messages = list.OrderBy(log => log.Timestamp);
+    return messages;
+
+}
     private void SendGlobalMessage(string username, string message)
     {
         string _message = $"{username}: {message}";

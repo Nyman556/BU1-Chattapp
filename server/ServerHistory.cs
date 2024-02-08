@@ -10,7 +10,7 @@ using MongoDB.Driver;
 
 namespace server;
 
-public abstract class LogMessages
+public class LogMessages
 {
     public string? Message { get; set; }
     public DateTime Timestamp { get; set; }
@@ -51,7 +51,7 @@ public class HistoryService
     {
         var log = new PublicLog
         {
-            Message = username + ": " + message,
+            Message = "public message from: " + username + ": " + message,
             Timestamp = GetTimeStamp("Central European Standard Time")
         };
         var PublicMessages = GetPublicLog();
@@ -96,7 +96,7 @@ public void SavePrivateLog(string senderName, string receiverName, string messag
 
         var newMessage = new PrivateLog
         {
-            Message = senderName + ": " + message,
+            Message = "Private message from: " + senderName + ": " + message,
             Timestamp = GetTimeStamp("Central European Standard Time")
         };
 
